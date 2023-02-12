@@ -4,7 +4,4 @@ __pycache__
 .hypothesis/
 build/
 reports/
-<<<<<<< HEAD
-=======
 brownie-config.yaml
->>>>>>> dfe7a8d90fecdc04587b8213a2f9256edf0138ac
