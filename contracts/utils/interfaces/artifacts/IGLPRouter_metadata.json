@@ -1,0 +1,114 @@
+{
+	"compiler": {
+		"version": "0.8.13+commit.abaa5c0e"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minUsdg",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minGlp",
+						"type": "uint256"
+					}
+				],
+				"name": "mintAndStakeGlp",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_tokenOut",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_glpAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minOut",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "_receiver",
+						"type": "address"
+					}
+				],
+				"name": "unstakeAndRedeemGlp",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"brownie_projects/sharplabs/contracts/utils/interfaces/IGLPRouter.sol": "IGLPRouter"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"brownie_projects/sharplabs/contracts/utils/interfaces/IGLPRouter.sol": {
+			"keccak256": "0x5736adf32da9af0963464ce22ca20789c770c9f7c9b66fd350175f3cfe161e11",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3c81a338f3f540a4971f31ff72b588bb18908903555cd587aa5293d3b97afc81",
+				"dweb:/ipfs/QmcEr2W3tEqnQuYj6nHT7Y9viSHm8euXUjXCuNKGk2MUUy"
+			]
+		}
+	},
+	"version": 1
+}

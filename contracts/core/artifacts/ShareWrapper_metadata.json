@@ -1,0 +1,213 @@
+{
+	"compiler": {
+		"version": "0.8.13+commit.abaa5c0e"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "balance_Wait",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "balance_staked",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "balance_withdraw",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "share",
+				"outputs": [
+					{
+						"internalType": "contract IERC20",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "stake",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalSupply_staked",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalSupply_wait",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalSupply_withdraw",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "withdraw",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"brownie_projects/sharplabs/contracts/core/ShareWrapper.sol": "ShareWrapper"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"brownie_projects/sharplabs/contracts/core/ShareWrapper.sol": {
+			"keccak256": "0x89f20b3b3d77b2d660a1f10a101e88d3b032aeaff638f1427a224a0747f72f6e",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://925aababa2358f64fb0ed9aa4ab25d24716a2661f94ea9934eca9f054e160c5a",
+				"dweb:/ipfs/QmdpQ9kSUTaBU4aqth6gCrkkx1v768D4BzZk5aigtJYV5w"
+			]
+		},
+		"brownie_projects/sharplabs/contracts/utils/Address.sol": {
+			"keccak256": "0x2254ff0365cbc4f80af2433d10890e0d4816c14f38a6e9e0c746f861ad434f1b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://17ecd670c7f9522306389b638a01d0b0e93156ec0e9c2cbe798b091e89474a32",
+				"dweb:/ipfs/QmUzZpE98hpS8J4KtqcLxxTzdrP2rKeUWssF5GJA1e3dYw"
+			]
+		},
+		"brownie_projects/sharplabs/contracts/utils/math/SafeMath.sol": {
+			"keccak256": "0x9abfb3888eb1535805fd1ce80be0738b5fc57c7aece52b85bd925d2e1d22bab1",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://7bae47c4219dfdc2aa9c3a38f76c0bb249a077ad55d79ec23ed43beb03a89916",
+				"dweb:/ipfs/QmP2fK7qHCjJ9RKqMmCifPdP3LwWfEEzZTne84AGyCkRrg"
+			]
+		},
+		"brownie_projects/sharplabs/contracts/utils/token/IERC20.sol": {
+			"keccak256": "0xbb468cd9676a6fdae71b903143d44854a9b4082b703613463644b828e9b7a400",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://21c8b22a3e1b54ef211bc17afb71f5a91ab26360133c7f835c9d0e89706bfb52",
+				"dweb:/ipfs/QmNwhncwZbdRfqpJe5fVH2S2KkZQrnLGXQsWdHnEfXVrFd"
+			]
+		},
+		"brownie_projects/sharplabs/contracts/utils/token/SafeERC20.sol": {
+			"keccak256": "0x593692219f7f58fc3dd89dc0271eaf2b459fd7515bbf53dcdb799bcce79c97b9",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://5dcb333da0bda5db19dacbc438f214d8e8408c210605baba683ce4af33ba525d",
+				"dweb:/ipfs/QmRjDL9cN4qKGozcoN34EscZZesPqsa9E5qggHRihUZxkB"
+			]
+		}
+	},
+	"version": 1
+}

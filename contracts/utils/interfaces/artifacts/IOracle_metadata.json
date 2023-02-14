@@ -1,0 +1,121 @@
+{
+	"compiler": {
+		"version": "0.8.13+commit.abaa5c0e"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_amountIn",
+						"type": "uint256"
+					}
+				],
+				"name": "consult",
+				"outputs": [
+					{
+						"internalType": "uint144",
+						"name": "amountOut",
+						"type": "uint144"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_period",
+						"type": "uint256"
+					}
+				],
+				"name": "setPeriod",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "sync",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_amountIn",
+						"type": "uint256"
+					}
+				],
+				"name": "twap",
+				"outputs": [
+					{
+						"internalType": "uint144",
+						"name": "_amountOut",
+						"type": "uint144"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "update",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"brownie_projects/sharplabs/contracts/utils/interfaces/IOracle.sol": "IOracle"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"brownie_projects/sharplabs/contracts/utils/interfaces/IOracle.sol": {
+			"keccak256": "0x7bcfcab84a9136cb5c581c1b0bcda7166124d0ad28240f6e84b06f3a9dc19592",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://93fcd1f5ae61151f5eb882edb7e58709b8083b29c5245727c75862f631cd3798",
+				"dweb:/ipfs/QmeAPaarUU9jRor4Auh7hbAwqaoJYmt9yBcyMXBsp9hhVL"
+			]
+		}
+	},
+	"version": 1
+}
