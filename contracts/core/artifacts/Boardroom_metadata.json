@@ -580,6 +580,24 @@
 				"type": "function"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "receiveFundsAndReward",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "rewardLockupEpochs",
 				"outputs": [
@@ -819,23 +837,23 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "_token",
+						"name": "_tokenOut",
 						"type": "address"
 					},
 					{
 						"internalType": "uint256",
-						"name": "_amount",
+						"name": "_glpAmount",
 						"type": "uint256"
 					},
 					{
 						"internalType": "uint256",
-						"name": "_minUsdg",
+						"name": "_minOut",
 						"type": "uint256"
 					},
 					{
-						"internalType": "uint256",
-						"name": "_minGlp",
-						"type": "uint256"
+						"internalType": "address",
+						"name": "_receiver",
+						"type": "address"
 					}
 				],
 				"name": "withdrawByGov",
@@ -932,11 +950,11 @@
 	},
 	"sources": {
 		"brownie_projects/sharplabs/contracts/core/GLP_POOL_HEDGED.sol": {
-			"keccak256": "0x589e3303745d104f580be0869522701293b66bcb5068937e322487e004b12e79",
+			"keccak256": "0x38892325000f24313a68d7c88d1e58ac73bb3f6585a931a1fe01ec6f22842e10",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://82a0e31c9575d8f53e9e31dcc1ce3098efdba35c4121aa3ddcae1aecdf6adb6f",
-				"dweb:/ipfs/QmNeKv3YGjYYUgL9mDp7Wg5TWQ8exw7nGgvPQkFCU2q1Cu"
+				"bzz-raw://e13f453fb276c67533f583d0475d578336ab1f410ea904c1b6910abd97e6f3cb",
+				"dweb:/ipfs/QmP5RC4dJh58jHZLPu1R4BbW4RaJJoLtWc9mRuqQXU96Dm"
 			]
 		},
 		"brownie_projects/sharplabs/contracts/core/ShareWrapper.sol": {
