@@ -3,9 +3,29 @@
 pragma solidity 0.8.13;
 
 interface IGLPPool {
+
     function receiveFundsAndReward(
         address _token,
         uint _amount
     ) external;
+
+    function stakeByGov(
+        address _token, 
+        uint256 _amount, 
+        uint256 _minUsdg, 
+        uint256 _minGlp
+    ) external;
+
+    function withdrawByGov(
+        address _tokenOut, 
+        uint256 _glpAmount, 
+        uint256 _minOut, 
+        address _receiver
+    ) external;
+
+    function handleStakeRequest() external;
+
+    function handleWithdrawRequest() external;
+
 }    
     

@@ -2,21 +2,58 @@
 
 pragma solidity 0.8.13;
 
-import "../utils/interface/IGLPPool.sol";
+import "../utils/interfaces/IGLPPool.sol";
 import "../utils/access/Operator.sol";
 
 contract Treasury is Operator {
-    function stakeGLP(address _GLPPool) external {
-        
-        IGLPPool(_GLPPool).stakeByGov()
-    }
-    
-    function withdrawGLP() external {
 
+    function stakeGLP(
+        address _GLPPool, 
+        address _token, 
+        uint256 _amount, 
+        uint256 _minUsdg, 
+        uint256 _minGlp
+    ) public onlyOperator {
+        IGLPPool(_GLPPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
+    }
+
+    function withdrawGLP(
+        address _GLPPool, 
+        address _tokenOut, 
+        uint256 _glpAmount, 
+        uint256 _minOut, 
+        address _receiver
+    ) public onlyOperator {
+        IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
+    }
+
+    function handleStakeRequest(address _GLPPool) public onlyOperator {
+        IGLPPool(_GLPPool).handleStakeRequest();
+    }
+
+    function handleWithdrawRequest(address _GLPPool) public onlyOperator {
+        IGLPPool(_GLPPool).handleWithdrawRequest();
+    }
+
+    function handleAtEveryEpoch(
+        address _GLPPool, 
+        address _token, 
+        uint256 _amount, 
+        uint256 _minUsdg, 
+        uint256 _minGlp,
+        address _tokenOut, 
+        uint256 _glpAmount, 
+        uint256 _minOut, 
+        address _receiver
+    ) external onlyOperator {
+        stakeGLP(_GLPPool, _token, _amount, _minUsdg, _minGlp);
+        handleStakeRequest(_GLPPool);
+        withdrawGLP(_GLPPool, _tokenOut, _glpAmount, _minOut, _receiver);
+        handleWithdrawRequest(_GLPPool);
     }
 
     function withdrawGLPPoolFunds(address _GLPPoool, address _token, uint amount) external {
-
+        
     }
 
     function sendFundsAndReward(address _token, address _amount) external {
