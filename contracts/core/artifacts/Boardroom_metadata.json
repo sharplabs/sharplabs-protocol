@@ -6,6 +6,37 @@
 	"output": {
 		"abi": [
 			{
+				"inputs": [
+					{
+						"internalType": "contract IERC20",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "contract IERC20",
+						"name": "_share",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_fee",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "_feeTo",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_governance",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
 				"anonymous": false,
 				"inputs": [
 					{
@@ -151,22 +182,42 @@
 				"type": "event"
 			},
 			{
-				"inputs": [
+				"inputs": [],
+				"name": "GLPManager",
+				"outputs": [
 					{
 						"internalType": "address",
-						"name": "_address",
+						"name": "",
 						"type": "address"
 					}
 				],
-				"name": "addAddressBlacklist",
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "GLPRouter",
 				"outputs": [
 					{
-						"internalType": "bool",
+						"internalType": "address",
 						"name": "",
-						"type": "bool"
+						"type": "address"
 					}
 				],
-				"stateMutability": "nonpayable",
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "USDC",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
@@ -177,7 +228,7 @@
 						"type": "uint256"
 					}
 				],
-				"name": "allocateSeigniorage",
+				"name": "allocateReward",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -190,7 +241,7 @@
 						"type": "address"
 					}
 				],
-				"name": "balanceOf",
+				"name": "balance_Wait",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -205,16 +256,16 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "",
+						"name": "account",
 						"type": "address"
 					}
 				],
-				"name": "blacklist",
+				"name": "balance_staked",
 				"outputs": [
 					{
-						"internalType": "bool",
+						"internalType": "uint256",
 						"name": "",
-						"type": "bool"
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -224,18 +275,19 @@
 				"inputs": [
 					{
 						"internalType": "address",
-						"name": "_address",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "_to",
+						"name": "account",
 						"type": "address"
 					}
 				],
-				"name": "blacklistFundWithdraw",
-				"outputs": [],
-				"stateMutability": "nonpayable",
+				"name": "balance_withdraw",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
@@ -398,12 +450,12 @@
 			},
 			{
 				"inputs": [],
-				"name": "getTokenPrice",
+				"name": "governance",
 				"outputs": [
 					{
-						"internalType": "uint256",
+						"internalType": "address",
 						"name": "",
-						"type": "uint256"
+						"type": "address"
 					}
 				],
 				"stateMutability": "view",
@@ -433,68 +485,17 @@
 				"type": "function"
 			},
 			{
-				"inputs": [
-					{
-						"internalType": "contract IERC20",
-						"name": "_token",
-						"type": "address"
-					},
-					{
-						"internalType": "contract IERC20",
-						"name": "_share",
-						"type": "address"
-					},
-					{
-						"internalType": "contract ITreasury",
-						"name": "_treasury",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "_fee",
-						"type": "uint256"
-					},
-					{
-						"internalType": "address",
-						"name": "_feeTo",
-						"type": "address"
-					}
-				],
-				"name": "initialize",
+				"inputs": [],
+				"name": "handleStakeRequest",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
 				"inputs": [],
-				"name": "initialized",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "_address",
-						"type": "address"
-					}
-				],
-				"name": "isAddressBlacklist",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
+				"name": "handleWithdrawRequest",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
@@ -566,22 +567,16 @@
 				"type": "function"
 			},
 			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "_address",
-						"type": "address"
-					}
-				],
-				"name": "removeAddressBlacklist",
+				"inputs": [],
+				"name": "period",
 				"outputs": [
 					{
-						"internalType": "bool",
+						"internalType": "uint256",
 						"name": "",
-						"type": "bool"
+						"type": "uint256"
 					}
 				],
-				"stateMutability": "nonpayable",
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
@@ -684,7 +679,7 @@
 				"inputs": [
 					{
 						"internalType": "uint256",
-						"name": "amount",
+						"name": "_amount",
 						"type": "uint256"
 					}
 				],
@@ -694,13 +689,62 @@
 				"type": "function"
 			},
 			{
-				"inputs": [],
-				"name": "token",
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minUsdg",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minGlp",
+						"type": "uint256"
+					}
+				],
+				"name": "stakeByGov",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "stakeQueue",
 				"outputs": [
 					{
-						"internalType": "contract IERC20",
-						"name": "",
+						"internalType": "address",
+						"name": "account",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestTimestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestEpoch",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -708,7 +752,7 @@
 			},
 			{
 				"inputs": [],
-				"name": "totalSupply",
+				"name": "startTime",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -721,12 +765,38 @@
 			},
 			{
 				"inputs": [],
-				"name": "treasury",
+				"name": "totalSupply_staked",
 				"outputs": [
 					{
-						"internalType": "contract ITreasury",
+						"internalType": "uint256",
 						"name": "",
-						"type": "address"
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalSupply_wait",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "totalSupply_withdraw",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -746,6 +816,34 @@
 				"type": "function"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_token",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minUsdg",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minGlp",
+						"type": "uint256"
+					}
+				],
+				"name": "withdrawByGov",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "withdrawLockupEpochs",
 				"outputs": [
@@ -756,6 +854,53 @@
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "withdrawalQueue",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestTimestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requestEpoch",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_amount",
+						"type": "uint256"
+					}
+				],
+				"name": "withhdraw_request",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			}
 		],
@@ -772,7 +917,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/core/GLP_POOL.sol": "Boardroom"
+			"brownie_projects/sharplabs/contracts/core/GLP_POOL_HEDGED.sol": "Boardroom"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -786,20 +931,20 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/core/GLP_POOL.sol": {
-			"keccak256": "0xde9b1004927aa52579eb223c2cd978a7fa4c7b8b3df60685636f23b40cb78d6c",
+		"brownie_projects/sharplabs/contracts/core/GLP_POOL_HEDGED.sol": {
+			"keccak256": "0x589e3303745d104f580be0869522701293b66bcb5068937e322487e004b12e79",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://3caa03908702550b0a7dbd0ed87d231c615f67fba250cc139fa810a5d7b6578d",
-				"dweb:/ipfs/QmQNw1bWkCcCeaZm5S3zypKjWvZAbTDfL4m1HfFwbV6ocC"
+				"bzz-raw://82a0e31c9575d8f53e9e31dcc1ce3098efdba35c4121aa3ddcae1aecdf6adb6f",
+				"dweb:/ipfs/QmNeKv3YGjYYUgL9mDp7Wg5TWQ8exw7nGgvPQkFCU2q1Cu"
 			]
 		},
 		"brownie_projects/sharplabs/contracts/core/ShareWrapper.sol": {
-			"keccak256": "0xb973a553ddb6f647886505e62f76364798b5f293f60e6df471db2b55b928c285",
+			"keccak256": "0x89f20b3b3d77b2d660a1f10a101e88d3b032aeaff638f1427a224a0747f72f6e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://21cada1d547e9631db1eed6bb813f41b3285e57219a3c636df5e5af83a1e9a13",
-				"dweb:/ipfs/QmUeB7esyoRs52uVJ4qoVp2vNfjGCEDm1oQounppAbXxL5"
+				"bzz-raw://925aababa2358f64fb0ed9aa4ab25d24716a2661f94ea9934eca9f054e160c5a",
+				"dweb:/ipfs/QmdpQ9kSUTaBU4aqth6gCrkkx1v768D4BzZk5aigtJYV5w"
 			]
 		},
 		"brownie_projects/sharplabs/contracts/utils/Address.sol": {
@@ -810,20 +955,12 @@
 				"dweb:/ipfs/QmUzZpE98hpS8J4KtqcLxxTzdrP2rKeUWssF5GJA1e3dYw"
 			]
 		},
-		"brownie_projects/sharplabs/contracts/utils/interfaces/IBasisAsset.sol": {
-			"keccak256": "0x1c4f534f233e5e3aa23d6b5e355d0f13b4935fe56cad587150d4a391489b54b4",
+		"brownie_projects/sharplabs/contracts/utils/interfaces/IGLPRouter.sol": {
+			"keccak256": "0x5736adf32da9af0963464ce22ca20789c770c9f7c9b66fd350175f3cfe161e11",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://ddef78442dd176100a3a8fc3b6ae70c1d1370cecc7d1103781dad6084b027540",
-				"dweb:/ipfs/QmPg5m9y1tNV6CHzDC4kzsdAucjFQHwAXh6Wyo8TghmD6L"
-			]
-		},
-		"brownie_projects/sharplabs/contracts/utils/interfaces/ITreasury.sol": {
-			"keccak256": "0x2d545e7abe91449babe85d90c66aa680933ae6a8468b4195af9761095a3b8821",
-			"license": "MIT",
-			"urls": [
-				"bzz-raw://d7fce1a27bb48808ec1cebcc96c28e79cafcdde4f8f5ca901f31a66cda35727e",
-				"dweb:/ipfs/QmPhSVHD8TTiNV1JKmTYWYVHtbs5Xo1bxKfh9xwZmbA4EC"
+				"bzz-raw://3c81a338f3f540a4971f31ff72b588bb18908903555cd587aa5293d3b97afc81",
+				"dweb:/ipfs/QmcEr2W3tEqnQuYj6nHT7Y9viSHm8euXUjXCuNKGk2MUUy"
 			]
 		},
 		"brownie_projects/sharplabs/contracts/utils/math/SafeMath.sol": {

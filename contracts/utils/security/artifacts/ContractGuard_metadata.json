@@ -18,7 +18,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/utils/security/ContractGuard.sol": "ContractGuard"
+			"brownie_projects/sharplabs/contracts/utils/security/ContractGuard.sol": "ContractGuard"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -32,7 +32,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"contracts/utils/security/ContractGuard.sol": {
+		"brownie_projects/sharplabs/contracts/utils/security/ContractGuard.sol": {
 			"keccak256": "0x5f20bc62c01fee18fd86df3cbcc26657977b1cc81734acd2b488f73960b04510",
 			"license": "MIT",
 			"urls": [
