@@ -219,11 +219,11 @@ contract Boardroom is ShareWrapper, ContractGuard {
     }
 
     function handleStakeRequest() public onlyOneBlock onlyGovernance {
-
-    }
-
-    function handleWithdrawRequest() public onlyOneBlock onlyGovernance {
-
+        uint length = stakeQueue.length;
+        for (uint i = 0; i < length; i++) {
+            _balances[stakeQueue[i].account].staked += stakeQueue[i].amount;
+            _balances[stakeQueue[i].account].wait -= stakeQueue[i].amount;
+        }
     }
 
     function withhdraw_request(uint256 _amount) external onlyOneBlock {
@@ -236,10 +236,9 @@ contract Boardroom is ShareWrapper, ContractGuard {
         require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch, "Boardroom: still in withdraw lockup");
         claimReward();
         if (fee > 0) {
-            uint tax = amount   
-            .mul(fee).div(10000);
+            uint tax = amount.mul(fee).div(10000);
             amount = amount.sub(tax);
-            share.safeTransferFrom(msg.sender, feeTo, tax);
+            share.safeTransfer(feeTo, tax);
         }
         super.withdraw(amount);
         emit Withdrawn(msg.sender, amount);
@@ -249,8 +248,17 @@ contract Boardroom is ShareWrapper, ContractGuard {
         withdraw(balance_withdraw(msg.sender));
     }
 
-    function withdrawByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) external onlyOneBlock onlyGovernance {
+    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyGovernance {
+        require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
+        IGLPRouter(GLPRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+    }
 
+    function handleWithdrawRequest() public onlyOneBlock onlyGovernance {
+        uint length = withdrawalQueue.length;
+        for (uint i = 0; i < length; i++) {
+            _balances[stakeQueue[i].account].staked -= stakeQueue[i].amount;
+            _balances[stakeQueue[i].account].withdraw += stakeQueue[i].amount;
+        }
     }
 
     function claimReward() public updateReward(msg.sender) {
@@ -262,6 +270,10 @@ contract Boardroom is ShareWrapper, ContractGuard {
             token.safeTransfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
         }
+    }
+
+    function receiveFundsAndReward(address _token, uint amount) public onlyOneBlock onlyGovernance {
+        IERC20(_token).safeTransferFrom(governance, address(this), amount);
     }
 
     function allocateReward(uint256 amount) external onlyOneBlock onlyGovernance {
