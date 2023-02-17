@@ -41,13 +41,12 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: 'https://rpc.ankr.com/polygon/ff2b1565758d5846b444d962f5816bbef5015907974abd6bbf539025459cb598',
+        url: 'https://rpc.ankr.com/arbitrum/ff2b1565758d5846b444d962f5816bbef5015907974abd6bbf539025459cb598',
       },
     },
-    polygon: {
-      url: 'https://rpc.ankr.com/polygon/ff2b1565758d5846b444d962f5816bbef5015907974abd6bbf539025459cb598',
+    arbitrum: {
+      url: 'https://rpc.ankr.com/arbitrum/ff2b1565758d5846b444d962f5816bbef5015907974abd6bbf539025459cb598',
       accounts: [process.env.PRIVATE_KEY],
-      gasLimit: 8611968
     },
   },
   mocha: {
