@@ -11,6 +11,9 @@ contract ShareWrapper {
 
     IERC20 public share;
 
+    uint256 public fee;
+    address public feeTo;
+
     struct TotalSupply {
         uint256 wait;
         uint256 staked;
@@ -51,16 +54,20 @@ contract ShareWrapper {
     }
 
     function stake(uint256 amount) public virtual {
-        _totalSupply.wait = _totalSupply.wait.add(amount);
-        _balances[msg.sender].wait = _balances[msg.sender].wait.add(amount);
+        _totalSupply.wait += amount;
+        _balances[msg.sender].wait += amount;
         share.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function withdraw(uint256 amount) public virtual {
-        uint256 memberShare = _balances[msg.sender].withdraw;
-        require(memberShare >= amount, "Boardroom: withdraw request greater than staked amount");
-        _totalSupply.withdraw = _totalSupply.withdraw.sub(amount);
-        _balances[msg.sender].withdraw = memberShare.sub(amount);
+        require(_balances[msg.sender].withdraw >= amount, "Boardroom: withdraw request greater than staked amount");
+        _totalSupply.withdraw -= amount;
+        _balances[msg.sender].withdraw -= amount;
+        if (fee > 0) {
+            uint tax = amount.mul(fee).div(10000);
+            amount = amount.sub(tax);
+            share.safeTransfer(feeTo, tax);
+        }
         share.safeTransfer(msg.sender, amount);
     }
 }

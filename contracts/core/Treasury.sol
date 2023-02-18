@@ -44,12 +44,19 @@ contract Treasury is Operator {
         address _tokenOut, 
         uint256 _glpAmount, 
         uint256 _minOut, 
-        address _receiver
+        address _receiver,
+        uint256 _funds
     ) external onlyOperator {
         stakeGLP(_GLPPool, _token, _amount, _minUsdg, _minGlp);
         handleStakeRequest(_GLPPool);
         withdrawGLP(_GLPPool, _tokenOut, _glpAmount, _minOut, _receiver);
         handleWithdrawRequest(_GLPPool);
+        allocateFunds(_GLPPool, _funds);
+        
+    }
+
+    function allocateFunds(address _GLPPool, uint256 _amount) public onlyOperator {
+        IGLPPool(_GLPPool).allocateFunds(_amount);
     }
 
     function withdrawGLPPoolFunds(address _GLPPoool, address _token, uint amount) external {

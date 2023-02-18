@@ -323,7 +323,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/utils/interfaces/IBoardroom.sol": "IBoardroom"
+			"sharplabs/contracts/utils/interfaces/IBoardroom.sol": "IBoardroom"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -337,7 +337,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/utils/interfaces/IBoardroom.sol": {
+		"sharplabs/contracts/utils/interfaces/IBoardroom.sol": {
 			"keccak256": "0x8d32ba1248203c68e9ab34473182a3b0c1c0a56a738d1a01e00a2a3a8ca5709c",
 			"license": "MIT",
 			"urls": [

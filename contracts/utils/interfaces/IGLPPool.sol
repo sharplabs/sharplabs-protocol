@@ -27,5 +27,7 @@ interface IGLPPool {
 
     function handleWithdrawRequest() external;
 
+    function allocateFunds(uint256 _amount) external;
+
 }    
     
