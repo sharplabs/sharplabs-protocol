@@ -35,7 +35,7 @@ contract Boardroom is ShareWrapper, ContractGuard {
         uint256 requestEpoch;
     }
 
-    struct WithdrawalInfo {
+    struct WithdralInfo {
         address account;
         uint256 amount;
         uint256 requestTimestamp;
@@ -54,7 +54,7 @@ contract Boardroom is ShareWrapper, ContractGuard {
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
     StakeInfo[] public stakeQueue;
-    WithdrawalInfo[] public withdrawalQueue;
+    WithdralInfo[] public withdrawalQueue;
 
     uint256 public withdrawLockupEpochs;
     uint256 public rewardLockupEpochs;
@@ -224,15 +224,16 @@ contract Boardroom is ShareWrapper, ContractGuard {
 
     function handleStakeRequest() public onlyOneBlock onlyGovernance {
         uint length = stakeQueue.length;
-        for (uint i = 0; i < length; i++) {
+        for (uint i = length - 1; i >= 0; i--) {
             _balances[stakeQueue[i].account].staked += stakeQueue[i].amount;
             _balances[stakeQueue[i].account].wait -= stakeQueue[i].amount;
             members[stakeQueue[i].account].epochTimerStart = epoch; // reset timer
+            stakeQueue.pop();
         }
     }
 
     function withhdraw_request(uint256 _amount) external onlyOneBlock {
-        WithdrawalInfo memory newWithdrawal = WithdrawalInfo({account: msg.sender, amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
+        WithdralInfo memory newWithdrawal = WithdralInfo({account: msg.sender, amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
         withdrawalQueue.push(newWithdrawal);
         _totalSupply.withdraw += _amount;
     }
@@ -258,9 +259,10 @@ contract Boardroom is ShareWrapper, ContractGuard {
 
     function handleWithdrawRequest() public onlyOneBlock onlyGovernance {
         uint length = withdrawalQueue.length;
-        for (uint i = 0; i < length; i++) {
-            _balances[stakeQueue[i].account].staked -= stakeQueue[i].amount;
-            _balances[stakeQueue[i].account].withdraw += stakeQueue[i].amount;
+        for (uint i = length - 1; i >= 0; i--) {
+            _balances[withdrawalQueue[i].account].staked -= withdrawalQueue[i].amount;
+            _balances[withdrawalQueue[i].account].withdraw += withdrawalQueue[i].amount;
+            withdrawalQueue.pop();
         }
     }
 
