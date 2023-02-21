@@ -9,7 +9,7 @@ contract ShareWrapper {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 public share;
+    IERC20 public token;
 
     uint256 public fee;
     address public feeTo;
@@ -56,7 +56,7 @@ contract ShareWrapper {
     function stake(uint256 amount) public virtual {
         _totalSupply.wait += amount;
         _balances[msg.sender].wait += amount;
-        share.safeTransferFrom(msg.sender, address(this), amount);
+        token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function withdraw(uint256 amount) public virtual {
@@ -66,8 +66,8 @@ contract ShareWrapper {
         if (fee > 0) {
             uint tax = amount.mul(fee).div(10000);
             amount = amount.sub(tax);
-            share.safeTransfer(feeTo, tax);
+            token.safeTransfer(feeTo, tax);
         }
-        share.safeTransfer(msg.sender, amount);
+        token.safeTransfer(msg.sender, amount);
     }
 }

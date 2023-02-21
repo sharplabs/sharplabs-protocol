@@ -6,10 +6,11 @@ import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
 
 import "../utils/security/ContractGuard.sol";
+import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "./ShareWrapper.sol";
 
-contract Boardroom is ShareWrapper, ContractGuard {
+contract Boardroom is ShareWrapper, ContractGuard, Operator {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -45,11 +46,8 @@ contract Boardroom is ShareWrapper, ContractGuard {
     /* ========== STATE VARIABLES ========== */
 
     // governance
-    address public operator;
     address public governance;
     address public treasury;
-
-    IERC20 token;
 
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
@@ -82,11 +80,6 @@ contract Boardroom is ShareWrapper, ContractGuard {
 
     /* ========== Modifiers =============== */
 
-    modifier onlyOperator() {
-        require(operator == msg.sender, "Boardroom: caller is not the operator");
-        _;
-    }
-
     modifier onlyGovernance() {
         require(governance == msg.sender, "Boardroom: caller is not the governance");
         _;
@@ -97,28 +90,16 @@ contract Boardroom is ShareWrapper, ContractGuard {
         _;
     }
 
-    modifier updateReward(address member) {
-        if (member != address(0)) {
-            Memberseat memory seat = members[member];
-            seat.rewardEarned = earned(member);
-            seat.lastSnapshotIndex = latestSnapshotIndex();
-            members[member] = seat;
-        }
-        _;
-    }
-
     /* ========== GOVERNANCE ========== */
 
     constructor (
         IERC20 _token,
-        IERC20 _share,
         uint256 _fee,
         address _feeTo,
         address _governance,
         address _treasury
     ) {
         token = _token;
-        share = _share;
         fee = _fee;
         feeTo = _feeTo;
         governance = _governance;
@@ -132,15 +113,10 @@ contract Boardroom is ShareWrapper, ContractGuard {
         rewardLockupEpochs = 1; // Lock for 3 epochs (24h) before release claimReward
 
         IERC20(USDC).safeApprove(GLPRouter, type(uint).max);
-        operator = msg.sender;
         emit Initialized(msg.sender, block.number);
     }
 
     /* ========== CONFIG ========== */
-
-    function setOperator(address _operator) external onlyOperator {
-        operator = _operator;
-    }
 
     function setLockUp(uint256 _withdrawLockupEpochs, uint256 _rewardLockupEpochs) external onlyOperator {
         require(_withdrawLockupEpochs >= _rewardLockupEpochs && _withdrawLockupEpochs <= 56, "_withdrawLockupEpochs: out of range"); // <= 2 week
@@ -204,9 +180,19 @@ contract Boardroom is ShareWrapper, ContractGuard {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function stake(uint256 _amount) public override onlyOneBlock updateReward(msg.sender) {
+    function updateReward(address member) public onlyOneBlock {
+        if (member != address(0)) {
+            Memberseat memory seat = members[member];
+            seat.rewardEarned = earned(member);
+            seat.lastSnapshotIndex = latestSnapshotIndex();
+            members[member] = seat;
+        }
+    }
+
+    function stake(uint256 _amount) public override onlyOneBlock {
         require(_amount > 0, "Boardroom: Cannot stake 0");
         require(_totalSupply.staked + _amount <= capacity, "stake no capacity");
+        updateReward(msg.sender);
         super.stake(_amount);
         StakeInfo memory newStake = StakeInfo({account: msg.sender, amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
         stakeQueue.push(newStake);
@@ -238,9 +224,10 @@ contract Boardroom is ShareWrapper, ContractGuard {
         _totalSupply.withdraw += _amount;
     }
 
-    function withdraw(uint256 amount) public override onlyOneBlock memberExists updateReward(msg.sender) {
+    function withdraw(uint256 amount) public override onlyOneBlock memberExists {
         require(amount > 0, "Boardroom: Cannot withdraw 0");
         require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch, "Boardroom: still in withdraw lockup");
+        updateReward(msg.sender);
         claimReward();
         super.withdraw(amount);
         emit Withdrawn(msg.sender, amount);
@@ -266,7 +253,8 @@ contract Boardroom is ShareWrapper, ContractGuard {
         }
     }
 
-    function claimReward() public updateReward(msg.sender) {
+    function claimReward() public {
+        updateReward(msg.sender);
         uint256 reward = members[msg.sender].rewardEarned;
         if (reward > 0) {
             require(members[msg.sender].epochTimerStart.add(rewardLockupEpochs) <= epoch, "Boardroom: still in reward lockup");
@@ -308,7 +296,6 @@ contract Boardroom is ShareWrapper, ContractGuard {
         require(_to != address(0), "zero");
         // do not allow to drain core tokens
         require(address(_token) != address(token), "token");
-        require(address(_token) != address(share), "share");
         _token.safeTransfer(_to, _amount);
     }
 }
