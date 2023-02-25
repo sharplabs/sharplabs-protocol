@@ -10,7 +10,7 @@ import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "./ShareWrapper.sol";
 
-contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
+contract GLP_POOL_HEDGED is ShareWrapper, ContractGuard, Operator {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
