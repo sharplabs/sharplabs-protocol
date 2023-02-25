@@ -7,31 +7,41 @@ import "../utils/access/Operator.sol";
 
 contract Treasury is Operator {
 
-    function stakeGLP(
+    address governance;
+
+    constructor(address _governance) {
+        governance = _governance;
+    }
+
+    function(uint256 _addr) public {
+
+    }
+
+    function buyGLP(
         address _GLPPool, 
         address _token, 
         uint256 _amount, 
         uint256 _minUsdg, 
         uint256 _minGlp
-    ) public onlyOperator {
+    ) public {
         IGLPPool(_GLPPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
     }
 
-    function withdrawGLP(
+    function sellGLP(
         address _GLPPool, 
         address _tokenOut, 
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
-    ) public onlyOperator {
+    ) public {
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
-    function handleStakeRequest(address _GLPPool) public onlyOperator {
+    function handleStakeRequest(address _GLPPool) public {
         IGLPPool(_GLPPool).handleStakeRequest();
     }
 
-    function handleWithdrawRequest(address _GLPPool) public onlyOperator {
+    function handleWithdrawRequest(address _GLPPool) public {
         IGLPPool(_GLPPool).handleWithdrawRequest();
     }
 
@@ -46,7 +56,7 @@ contract Treasury is Operator {
         uint256 _minOut, 
         address _receiver,
         uint256 _funds
-    ) external onlyOperator {
+    ) external {
         stakeGLP(_GLPPool, _token, _amount, _minUsdg, _minGlp);
         handleStakeRequest(_GLPPool);
         withdrawGLP(_GLPPool, _tokenOut, _glpAmount, _minOut, _receiver);
@@ -55,7 +65,7 @@ contract Treasury is Operator {
         
     }
 
-    function allocateFunds(address _GLPPool, uint256 _amount) public onlyOperator {
+    function allocateFunds(address _GLPPool, uint256 _amount) public {
         IGLPPool(_GLPPool).allocateFunds(_amount);
     }
 

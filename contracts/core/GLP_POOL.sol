@@ -30,14 +30,12 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
     }
 
     struct StakeInfo {
-        address account;
         uint256 amount;
         uint256 requestTimestamp;
         uint256 requestEpoch;
     }
 
-    struct WithdralInfo {
-        address account;
+    struct WithdrawInfo {
         uint256 amount;
         uint256 requestTimestamp;
         uint256 requestEpoch;
@@ -45,14 +43,20 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
 
     /* ========== STATE VARIABLES ========== */
 
+    // reward
+    address totalReward;
+
     // governance
     address public governance;
     address public treasury;
 
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
-    StakeInfo[] public stakeQueue;
-    WithdralInfo[] public withdrawalQueue;
+
+ //   StakeInfo[] private stakeQueue;
+ //   WithdralInfo[] private withdrawalQueue;
+    mapping(address => StakeInfo[]) public StakeRequest;
+    mapping(address => WithdrawInfo[]) public WithdrawRequest;
 
     uint256 public withdrawLockupEpochs;
     uint256 public rewardLockupEpochs;
@@ -133,6 +137,10 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         feeTo = _feeTo;
     }
 
+    function setCapacity(uint256 _capacity) external onlyOperator {
+        capacity = _capacity;
+    }
+
     /* ========== VIEW FUNCTIONS ========== */
 
     // =========== Snapshot getters
@@ -178,8 +186,6 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         return balance_withdraw(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
-    /* ========== MUTATIVE FUNCTIONS ========== */
-
     function updateReward(address member) public onlyOneBlock {
         if (member != address(0)) {
             Memberseat memory seat = members[member];
@@ -189,71 +195,7 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         }
     }
 
-    function stake(uint256 _amount) public override onlyOneBlock {
-        require(_amount > 0, "Boardroom: Cannot stake 0");
-        require(_totalSupply.staked + _amount <= capacity, "stake no capacity");
-        updateReward(msg.sender);
-        super.stake(_amount);
-        StakeInfo memory newStake = StakeInfo({account: msg.sender, amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
-        stakeQueue.push(newStake);
-        emit Staked(msg.sender, _amount);
-    }
-
-    function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyGovernance {
-        require(_totalSupply.wait > 0, "Boardroom: Cannot stake 0");
-        IERC20(_token).safeApprove(GLPManager, 0);
-        IERC20(_token).safeApprove(GLPManager, _amount);
-        IGLPRouter(GLPRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
-        _totalSupply.staked += _amount;
-        _totalSupply.wait -= _amount;
-    }
-
-    function handleStakeRequest() public onlyOneBlock onlyGovernance {
-        uint length = stakeQueue.length;
-        for (uint i = length - 1; i >= 0; i--) {
-            _balances[stakeQueue[i].account].staked += stakeQueue[i].amount;
-            _balances[stakeQueue[i].account].wait -= stakeQueue[i].amount;
-            members[stakeQueue[i].account].epochTimerStart = epoch; // reset timer
-            stakeQueue.pop();
-        }
-    }
-
-    function withhdraw_request(uint256 _amount) external onlyOneBlock {
-        WithdralInfo memory newWithdrawal = WithdralInfo({account: msg.sender, amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
-        withdrawalQueue.push(newWithdrawal);
-        _totalSupply.withdraw += _amount;
-    }
-
-    function withdraw(uint256 amount) public override onlyOneBlock memberExists {
-        require(amount > 0, "Boardroom: Cannot withdraw 0");
-        require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch, "Boardroom: still in withdraw lockup");
-        updateReward(msg.sender);
-        claimReward();
-        super.withdraw(amount);
-        emit Withdrawn(msg.sender, amount);
-    }
-
-    function exit() external {
-        withdraw(balance_withdraw(msg.sender));
-    }
-
-    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyGovernance {
-        require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
-        uint256 withdrawAmount = totalSupply_withdraw();
-        IGLPRouter(GLPRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
-        _totalSupply.staked -= withdrawAmount;
-    }
-
-    function handleWithdrawRequest() public onlyOneBlock onlyGovernance {
-        uint length = withdrawalQueue.length;
-        for (uint i = length - 1; i >= 0; i--) {
-            _balances[withdrawalQueue[i].account].staked -= withdrawalQueue[i].amount;
-            _balances[withdrawalQueue[i].account].withdraw += withdrawalQueue[i].amount;
-            withdrawalQueue.pop();
-        }
-    }
-
-    function claimReward() public {
+    function claimReward() internal {
         updateReward(msg.sender);
         uint256 reward = members[msg.sender].rewardEarned;
         if (reward > 0) {
@@ -265,17 +207,103 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         }
     }
 
+    /* ========== MUTATIVE FUNCTIONS ========== */
+
+    function stake(uint256 _amount) public override onlyOneBlock {
+        require(_amount > 0, "Boardroom: Cannot stake 0");
+        require(_totalSupply.staked + _amount <= capacity, "stake no capacity");
+        super.stake(_amount);
+        StakeInfo memory newStake = StakeInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
+        StakeRequest[msg.sender].push(newStake);
+        emit Staked(msg.sender, _amount);
+    }
+
+    function withdraw_request(uint256 _amount) external onlyOneBlock {
+        require(_amount > 0, "Boardroom: Cannot withdraw 0");
+        require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch, "Boardroom: still in withdraw lockup");
+        WithdrawInfo memory newWithdraw = WithdrawInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
+        WithdrawRequest[msg.sender].push(newWithdraw);
+    }
+
+    function withdraw(uint256 amount) public override onlyOneBlock memberExists {
+        require(amount != 0, "cannot withdraw 0");
+        super.withdraw(amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    function redeem()external onlyOneBlock {
+        uint amount = balance_wait(msg.sender);
+        _totalSupply.wait -= amount;
+        _balances[msg.sender].wait -= amount;
+        token.safeTransfer(msg.sender, amount);        
+    }
+
+    function exit() external {
+        withdraw(balance_withdraw(msg.sender));
+    }
+
+    function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyGovernance {
+        for (uint i = 0; i < _address.length; i++) {
+            address user = _address[i];
+            StakeInfo[] memory stakeInfo = StakeRequest[user];
+            for(uint j = 0; j < stakeInfo.length; j++){
+                uint amount = stakeInfo[j].amount;
+                _balances[user].wait -= amount;
+                _totalSupply.wait -= amount;
+                _balances[user].staked += amount;
+                _totalSupply.staked += amount;
+                updateReward(user);
+                members[user].epochTimerStart = epoch; // reset timer
+            }
+            delete StakeRequest[user];
+        }
+    }
+
+    function handleWithdrawRequest(address[] memory _address) public onlyOneBlock onlyGovernance {
+        for (uint i = 0; i < _address.length; i++) {
+            address user = _address[i];
+            WithdrawInfo[] memory withdrawInfo = WithdrawRequest[user];
+            for(uint j = 0; j < withdrawInfo.length; j++){
+                uint amount = withdrawInfo[j].amount;
+                _balances[user].staked -= amount;
+                _totalSupply.staked -= amount;
+                _balances[user].withdraw += amount;
+                _totalSupply.withdraw += amount;
+                updateReward(user);
+                claimReward();
+                members[user].epochTimerStart = epoch; // reset timer
+            }
+            delete WithdrawRequest[user];
+        }
+    }
+
+    function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyGovernance {
+        require(_totalSupply.wait > 0, "Boardroom: Cannot stake 0");
+        IERC20(_token).safeApprove(GLPManager, 0);
+        IERC20(_token).safeApprove(GLPManager, _amount);
+        IGLPRouter(GLPRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
+        _totalSupply.staked += _amount;
+        _totalSupply.wait -= _amount;
+    }
+
+    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyGovernance {
+        require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
+        uint256 withdrawAmount = total_supply_withdraw();
+        IGLPRouter(GLPRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+        _totalSupply.staked -= withdrawAmount;
+    }
+
     function receiveFundsAndReward(address _token, uint amount) public onlyOneBlock onlyGovernance {
         IERC20(_token).safeTransferFrom(governance, address(this), amount);
     }
 
     function allocateFunds(uint256 amount) external onlyOneBlock onlyGovernance {
         require(amount > 0, "Boardroom: Cannot allocate 0");
-        require(totalSupply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
+        require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
 
         // Create & add new snapshot
         uint256 prevRPS = getLatestSnapshot().rewardPerShare;
-        uint256 nextRPS = prevRPS.add(amount.mul(1e18).div(totalSupply_staked()));
+        uint256 nextRPS = prevRPS.add(amount.mul(1e18).div(total_supply_staked()));
 
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
@@ -288,14 +316,4 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
 
     }
 
-    function governanceRecoverUnsupported(
-        IERC20 _token,
-        uint256 _amount,
-        address _to
-    ) external onlyOperator {
-        require(_to != address(0), "zero");
-        // do not allow to drain core tokens
-        require(address(_token) != address(token), "token");
-        _token.safeTransfer(_to, _amount);
-    }
 }

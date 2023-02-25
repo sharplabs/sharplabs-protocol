@@ -29,19 +29,19 @@ contract ShareWrapper {
     mapping(address => Balances) internal _balances;
     TotalSupply internal _totalSupply;
 
-    function totalSupply_wait() public view returns (uint256) {
+    function total_supply_wait() public view returns (uint256) {
         return _totalSupply.wait;
     }
 
-    function totalSupply_staked() public view returns (uint256) {
+    function total_supply_staked() public view returns (uint256) {
         return _totalSupply.staked;
     }
 
-    function totalSupply_withdraw() public view returns (uint256) {
+    function total_supply_withdraw() public view returns (uint256) {
         return _totalSupply.withdraw;
     }
 
-    function balance_Wait(address account) public view returns (uint256) {
+    function balance_wait(address account) public view returns (uint256) {
         return _balances[account].wait;
     }
 
