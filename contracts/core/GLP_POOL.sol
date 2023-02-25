@@ -10,7 +10,7 @@ import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "./ShareWrapper.sol";
 
-contract Boardroom is ShareWrapper, ContractGuard, Operator {
+contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -114,7 +114,6 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         boardroomHistory.push(genesisSnapshot);
 
         withdrawLockupEpochs = 1; // Lock for 6 epochs (48h) before release withdraw
-        rewardLockupEpochs = 1; // Lock for 3 epochs (24h) before release claimReward
 
         IERC20(USDC).safeApprove(GLPRouter, type(uint).max);
         emit Initialized(msg.sender, block.number);
@@ -122,10 +121,9 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
 
     /* ========== CONFIG ========== */
 
-    function setLockUp(uint256 _withdrawLockupEpochs, uint256 _rewardLockupEpochs) external onlyOperator {
-        require(_withdrawLockupEpochs >= _rewardLockupEpochs && _withdrawLockupEpochs <= 56, "_withdrawLockupEpochs: out of range"); // <= 2 week
+    function setLockUp(uint256 _withdrawLockupEpochs) external onlyOperator {
+        require(_withdrawLockupEpochs >= 0, "_withdrawLockupEpochs: out of range");
         withdrawLockupEpochs = _withdrawLockupEpochs;
-        rewardLockupEpochs = _rewardLockupEpochs;
     }
 
     function setFee(uint256 _fee) external onlyOperator {
@@ -137,7 +135,7 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         feeTo = _feeTo;
     }
 
-    function setCapacity(uint256 _capacity) external onlyOperator {
+    function setCapacity(uint256 _capacity) external onlyGovernance {
         capacity = _capacity;
     }
 
@@ -297,7 +295,7 @@ contract Boardroom is ShareWrapper, ContractGuard, Operator {
         IERC20(_token).safeTransferFrom(governance, address(this), amount);
     }
 
-    function allocateFunds(uint256 amount) external onlyOneBlock onlyGovernance {
+    function allocateReward(uint256 amount) external onlyOneBlock onlyGovernance {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
 

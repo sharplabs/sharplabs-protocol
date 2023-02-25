@@ -20,7 +20,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/bebu_finance/contracts/utils/token/SafeERC20.sol": "SafeERC20"
+			"sharplabs/contracts/utils/token/SafeERC20.sol": "SafeERC20"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -34,7 +34,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/bebu_finance/contracts/utils/Address.sol": {
+		"sharplabs/contracts/utils/Address.sol": {
 			"keccak256": "0x2254ff0365cbc4f80af2433d10890e0d4816c14f38a6e9e0c746f861ad434f1b",
 			"license": "MIT",
 			"urls": [
@@ -42,7 +42,7 @@
 				"dweb:/ipfs/QmUzZpE98hpS8J4KtqcLxxTzdrP2rKeUWssF5GJA1e3dYw"
 			]
 		},
-		"brownie_projects/bebu_finance/contracts/utils/math/SafeMath.sol": {
+		"sharplabs/contracts/utils/math/SafeMath.sol": {
 			"keccak256": "0x9abfb3888eb1535805fd1ce80be0738b5fc57c7aece52b85bd925d2e1d22bab1",
 			"license": "MIT",
 			"urls": [
@@ -50,7 +50,7 @@
 				"dweb:/ipfs/QmP2fK7qHCjJ9RKqMmCifPdP3LwWfEEzZTne84AGyCkRrg"
 			]
 		},
-		"brownie_projects/bebu_finance/contracts/utils/token/IERC20.sol": {
+		"sharplabs/contracts/utils/token/IERC20.sol": {
 			"keccak256": "0xbb468cd9676a6fdae71b903143d44854a9b4082b703613463644b828e9b7a400",
 			"license": "MIT",
 			"urls": [
@@ -58,7 +58,7 @@
 				"dweb:/ipfs/QmNwhncwZbdRfqpJe5fVH2S2KkZQrnLGXQsWdHnEfXVrFd"
 			]
 		},
-		"brownie_projects/bebu_finance/contracts/utils/token/SafeERC20.sol": {
+		"sharplabs/contracts/utils/token/SafeERC20.sol": {
 			"keccak256": "0x593692219f7f58fc3dd89dc0271eaf2b459fd7515bbf53dcdb799bcce79c97b9",
 			"license": "MIT",
 			"urls": [

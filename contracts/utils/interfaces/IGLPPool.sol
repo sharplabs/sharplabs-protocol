@@ -23,11 +23,12 @@ interface IGLPPool {
         address _receiver
     ) external;
 
-    function handleStakeRequest() external;
+    function handleStakeRequest(address[] memory _address) external;
 
-    function handleWithdrawRequest() external;
+    function handleWithdrawRequest(address[] memory _address) external;
 
-    function allocateFunds(uint256 _amount) external;
+    function allocateReward(uint256 _amount) external;
 
+    function setCapacity(uint256 _amount) external;
 }    
     

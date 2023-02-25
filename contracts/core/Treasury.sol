@@ -4,17 +4,27 @@ pragma solidity 0.8.13;
 
 import "../utils/interfaces/IGLPPool.sol";
 import "../utils/access/Operator.sol";
+import "../utils/token/IERC20.sol";
+import "../utils/token/SafeERC20.sol";
 
 contract Treasury is Operator {
 
-    address governance;
+    using SafeERC20 for IERC20;
 
-    constructor(address _governance) {
-        governance = _governance;
+    address governance;
+    address glp_pool;
+    address glp_pool_hedged;
+
+
+    modifier onlyGovernance() {
+        require(governance == msg.sender, "Boardroom: caller is not the governance");
+        _;
     }
 
-    function(uint256 _addr) public {
-
+    constructor(address _governance, address _glp_pool, address _glp_pool_hedged) {
+        governance = _governance;
+        glp_pool = _glp_pool;
+        glp_pool_hedged = _glp_pool_hedged;
     }
 
     function buyGLP(
@@ -23,7 +33,7 @@ contract Treasury is Operator {
         uint256 _amount, 
         uint256 _minUsdg, 
         uint256 _minGlp
-    ) public {
+    ) public onlyGovernance{
         IGLPPool(_GLPPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
     }
 
@@ -33,47 +43,40 @@ contract Treasury is Operator {
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
-    ) public {
+    ) public onlyGovernance{
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
-    function handleStakeRequest(address _GLPPool) public {
-        IGLPPool(_GLPPool).handleStakeRequest();
+    function sendPoolFunds(address _glp_pool, address _token, uint _amount) external onlyGovernance{
+        IERC20(_token).safeTransfer(_glp_pool, _amount);
     }
 
-    function handleWithdrawRequest(address _GLPPool) public {
-        IGLPPool(_GLPPool).handleWithdrawRequest();
+    function withdrawPoolFunds(address _glp_pool, address _token, uint _amount) external onlyGovernance{
+        IERC20(_token).safeTransferFrom(_glp_pool, address(this), _amount);
     }
 
-    function handleAtEveryEpoch(
-        address _GLPPool, 
-        address _token, 
-        uint256 _amount, 
-        uint256 _minUsdg, 
-        uint256 _minGlp,
-        address _tokenOut, 
-        uint256 _glpAmount, 
-        uint256 _minOut, 
-        address _receiver,
-        uint256 _funds
-    ) external {
-        stakeGLP(_GLPPool, _token, _amount, _minUsdg, _minGlp);
-        handleStakeRequest(_GLPPool);
-        withdrawGLP(_GLPPool, _tokenOut, _glpAmount, _minOut, _receiver);
-        handleWithdrawRequest(_GLPPool);
-        allocateFunds(_GLPPool, _funds);
-        
+    function allocateReward(address _glp_pool, uint256 _amount) public onlyGovernance{
+        IGLPPool(_glp_pool).allocateReward(_amount);
     }
 
-    function allocateFunds(address _GLPPool, uint256 _amount) public {
-        IGLPPool(_GLPPool).allocateFunds(_amount);
+    function deposit(address _token, uint256 amount) external onlyGovernance {
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function withdrawGLPPoolFunds(address _GLPPoool, address _token, uint amount) external {
-        
+    function withdraw(address _token, uint256 amount) external onlyGovernance {
+        IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
-    function sendFundsAndReward(address _token, address _amount) external {
-
+    function handleStakeRequest(address _glp_pool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_glp_pool).handleStakeRequest(_address);
     }
+
+    function handleWithdrawRequest(address _glp_pool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_glp_pool).handleWithdrawRequest(_address);
+    }
+
+    function setCapacity(uint256 amount) external onlyOperator{
+        IGLPPool(glp_pool).setCapacity(amount);
+    }
+
 }
