@@ -15,16 +15,24 @@ contract Treasury is Operator {
     address glp_pool;
     address glp_pool_hedged;
 
+    // flags
+    bool public initialized = false;
 
     modifier onlyGovernance() {
         require(governance == msg.sender, "Boardroom: caller is not the governance");
         _;
     }
 
-    constructor(address _governance, address _glp_pool, address _glp_pool_hedged) {
+    modifier notInitialized() {
+        require(!initialized, "Boardroom: already initialized");
+        _;
+    }
+
+    function initialize(address _governance, address _glp_pool, address _glp_pool_hedged) external notInitialized {
         governance = _governance;
         glp_pool = _glp_pool;
         glp_pool_hedged = _glp_pool_hedged;
+        initialized = true;
     }
 
     function buyGLP(

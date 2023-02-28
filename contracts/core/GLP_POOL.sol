@@ -209,7 +209,7 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
 
     function stake(uint256 _amount) public override onlyOneBlock {
         require(_amount > 0, "Boardroom: Cannot stake 0");
-        require(_totalSupply.staked + _amount <= capacity, "stake no capacity");
+        require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
         super.stake(_amount);
         StakeInfo memory newStake = StakeInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
         StakeRequest[msg.sender].push(newStake);
@@ -291,10 +291,6 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         _totalSupply.staked -= withdrawAmount;
     }
 
-    function receiveFundsAndReward(address _token, uint amount) public onlyOneBlock onlyGovernance {
-        IERC20(_token).safeTransferFrom(governance, address(this), amount);
-    }
-
     function allocateReward(uint256 amount) external onlyOneBlock onlyGovernance {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
@@ -306,12 +302,6 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
 
-        IERC20(USDC).safeTransferFrom(msg.sender, address(this), amount);
         emit RewardAdded(msg.sender, amount);
     }
-
-    function sendToTreasury(address _token, uint256 amount) external onlyGovernance {
-
-    }
-
 }
