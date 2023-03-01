@@ -15,6 +15,8 @@ contract Treasury is Operator {
     address glp_pool;
     address glp_pool_hedged;
 
+    uint256 hedgeRatio = 10000;
+
     // flags
     bool public initialized = false;
 
@@ -83,7 +85,12 @@ contract Treasury is Operator {
         IGLPPool(_glp_pool).handleWithdrawRequest(_address);
     }
 
-    function setCapacity(uint256 amount) external onlyOperator{
+    function setHedgeRatio(uint ratio) external onlyGovernance {
+        hedgeRatio = ratio;
+    }
+
+    function updateCapacity() external onlyOperator {
+        uint amount = IGLPPool(glp_pool_hedged).total_supply_staked() * hedgeRatio / 10000;
         IGLPPool(glp_pool).setCapacity(amount);
     }
 
