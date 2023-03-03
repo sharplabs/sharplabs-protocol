@@ -94,7 +94,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/utils/interfaces/IOracle.sol": "IOracle"
+			"sharplabs/contracts/utils/interfaces/IOracle.sol": "IOracle"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -108,7 +108,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/utils/interfaces/IOracle.sol": {
+		"sharplabs/contracts/utils/interfaces/IOracle.sol": {
 			"keccak256": "0x7bcfcab84a9136cb5c581c1b0bcda7166124d0ad28240f6e84b06f3a9dc19592",
 			"license": "MIT",
 			"urls": [

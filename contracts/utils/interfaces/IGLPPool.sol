@@ -23,6 +23,8 @@ interface IGLPPool {
         address _receiver
     ) external;
 
+    function total_supply_staked() external returns (uint);
+
     function handleStakeRequest(address[] memory _address) external;
 
     function handleWithdrawRequest(address[] memory _address) external;

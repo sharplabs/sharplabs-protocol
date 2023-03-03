@@ -10,7 +10,8 @@ import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "./ShareWrapper.sol";
 
-contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
+contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
+
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -43,23 +44,23 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
 
     /* ========== STATE VARIABLES ========== */
 
+    address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+
     // reward
-    address totalReward;
+    address public totalReward;
 
     // governance
     address public governance;
-    address public treasury;
 
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
 
  //   StakeInfo[] private stakeQueue;
  //   WithdralInfo[] private withdrawalQueue;
-    mapping(address => StakeInfo[]) public StakeRequest;
-    mapping(address => WithdrawInfo[]) public WithdrawRequest;
+    mapping(address => mapping(uint256 => StakeInfo[])) public StakeRequest;
+    mapping(address => mapping(uint256 => WithdrawInfo[]))public WithdrawRequest;
 
     uint256 public withdrawLockupEpochs;
-    uint256 public rewardLockupEpochs;
 
     uint256 public capacity;
 
@@ -67,9 +68,8 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
     uint256 public epoch;
     uint256 public period = 8 hours;
 
-    address public GLPRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
-    address public GLPManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
-    address public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+    address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
+    address public glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
 
 
     /* ========== EVENTS ========== */
@@ -100,22 +100,19 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         IERC20 _token,
         uint256 _fee,
         address _feeTo,
-        address _governance,
-        address _treasury
+        address _governance
     ) {
         token = _token;
         fee = _fee;
         feeTo = _feeTo;
         governance = _governance;
-        treasury = _treasury;
         startTime = block.timestamp;
 
         BoardroomSnapshot memory genesisSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: 0, rewardPerShare: 0});
         boardroomHistory.push(genesisSnapshot);
 
-        withdrawLockupEpochs = 1; // Lock for 6 epochs (48h) before release withdraw
+        withdrawLockupEpochs = 2; // Lock for 2 epochs (16h) before release withdraw
 
-        IERC20(USDC).safeApprove(GLPRouter, type(uint).max);
         emit Initialized(msg.sender, block.number);
     }
 
@@ -139,6 +136,19 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         capacity = _capacity;
     }
 
+    function setGlpRouter(address _glpRouter) external onlyGovernance {
+        glpRouter = _glpRouter;
+    }
+
+    function setGlpManager(address _glpManager) external onlyGovernance {
+        glpManager = _glpManager;
+    }
+
+    function setGovernance(address _governance) external onlyGovernance {
+        governance = _governance;
+    }
+
+
     /* ========== VIEW FUNCTIONS ========== */
 
     // =========== Snapshot getters
@@ -161,10 +171,6 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
 
     function canWithdraw(address member) external view returns (bool) {
         return members[member].epochTimerStart.add(withdrawLockupEpochs) <= epoch;
-    }
-
-    function canClaimReward(address member) external view returns (bool) {
-        return members[member].epochTimerStart.add(rewardLockupEpochs) <= epoch;
     }
 
     function nextEpochPoint() external view returns (uint256) {
@@ -193,15 +199,14 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         }
     }
 
-    function claimReward() internal {
-        updateReward(msg.sender);
-        uint256 reward = members[msg.sender].rewardEarned;
+    function claimReward(address member) internal {
+        updateReward(member);
+        uint256 reward = members[member].rewardEarned;
         if (reward > 0) {
-            require(members[msg.sender].epochTimerStart.add(rewardLockupEpochs) <= epoch, "Boardroom: still in reward lockup");
-            members[msg.sender].epochTimerStart = epoch; // reset timer
-            members[msg.sender].rewardEarned = 0;
-            token.safeTransfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
+            members[member].epochTimerStart = epoch; // reset timer
+            members[member].rewardEarned = 0;
+            token.safeTransfer(member, reward);
+            emit RewardPaid(member, reward);
         }
     }
 
@@ -209,10 +214,10 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
 
     function stake(uint256 _amount) public override onlyOneBlock {
         require(_amount > 0, "Boardroom: Cannot stake 0");
-        require(_totalSupply.staked + _amount <= capacity, "stake no capacity");
+        require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
         super.stake(_amount);
         StakeInfo memory newStake = StakeInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
-        StakeRequest[msg.sender].push(newStake);
+        StakeRequest[msg.sender][epoch].push(newStake);
         emit Staked(msg.sender, _amount);
     }
 
@@ -220,7 +225,7 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         require(_amount > 0, "Boardroom: Cannot withdraw 0");
         require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch, "Boardroom: still in withdraw lockup");
         WithdrawInfo memory newWithdraw = WithdrawInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch});
-        WithdrawRequest[msg.sender].push(newWithdraw);
+        WithdrawRequest[msg.sender][epoch].push(newWithdraw);
     }
 
     function withdraw(uint256 amount) public override onlyOneBlock memberExists {
@@ -243,7 +248,7 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
     function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyGovernance {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            StakeInfo[] memory stakeInfo = StakeRequest[user];
+            StakeInfo[] memory stakeInfo = StakeRequest[user][epoch];
             for(uint j = 0; j < stakeInfo.length; j++){
                 uint amount = stakeInfo[j].amount;
                 _balances[user].wait -= amount;
@@ -253,14 +258,14 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
                 updateReward(user);
                 members[user].epochTimerStart = epoch; // reset timer
             }
-            delete StakeRequest[user];
+            delete StakeRequest[user][epoch];
         }
     }
 
     function handleWithdrawRequest(address[] memory _address) public onlyOneBlock onlyGovernance {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            WithdrawInfo[] memory withdrawInfo = WithdrawRequest[user];
+            WithdrawInfo[] memory withdrawInfo = WithdrawRequest[user][epoch];
             for(uint j = 0; j < withdrawInfo.length; j++){
                 uint amount = withdrawInfo[j].amount;
                 _balances[user].staked -= amount;
@@ -268,18 +273,18 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
                 _balances[user].withdraw += amount;
                 _totalSupply.withdraw += amount;
                 updateReward(user);
-                claimReward();
+                claimReward(user);
                 members[user].epochTimerStart = epoch; // reset timer
             }
-            delete WithdrawRequest[user];
+            delete WithdrawRequest[user][epoch];
         }
     }
 
     function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyGovernance {
         require(_totalSupply.wait > 0, "Boardroom: Cannot stake 0");
-        IERC20(_token).safeApprove(GLPManager, 0);
-        IERC20(_token).safeApprove(GLPManager, _amount);
-        IGLPRouter(GLPRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
+        IERC20(_token).safeApprove(glpManager, 0);
+        IERC20(_token).safeApprove(glpManager, _amount);
+        IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
         _totalSupply.staked += _amount;
         _totalSupply.wait -= _amount;
     }
@@ -287,12 +292,8 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyGovernance {
         require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
         uint256 withdrawAmount = total_supply_withdraw();
-        IGLPRouter(GLPRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+        IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         _totalSupply.staked -= withdrawAmount;
-    }
-
-    function receiveFundsAndReward(address _token, uint amount) public onlyOneBlock onlyGovernance {
-        IERC20(_token).safeTransferFrom(governance, address(this), amount);
     }
 
     function allocateReward(uint256 amount) external onlyOneBlock onlyGovernance {
@@ -306,12 +307,6 @@ contract GLP_POOL is ShareWrapper, ContractGuard, Operator {
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
 
-        IERC20(USDC).safeTransferFrom(msg.sender, address(this), amount);
         emit RewardAdded(msg.sender, amount);
     }
-
-    function sendToTreasury(address _token, uint256 amount) external onlyGovernance {
-
-    }
-
 }

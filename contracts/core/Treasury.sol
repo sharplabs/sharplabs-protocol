@@ -15,16 +15,26 @@ contract Treasury is Operator {
     address glp_pool;
     address glp_pool_hedged;
 
+    uint256 hedgeRatio = 10000;
+
+    // flags
+    bool public initialized = false;
 
     modifier onlyGovernance() {
         require(governance == msg.sender, "Boardroom: caller is not the governance");
         _;
     }
 
-    constructor(address _governance, address _glp_pool, address _glp_pool_hedged) {
+    modifier notInitialized() {
+        require(!initialized, "Boardroom: already initialized");
+        _;
+    }
+
+    function initialize(address _governance, address _glp_pool, address _glp_pool_hedged) external notInitialized {
         governance = _governance;
         glp_pool = _glp_pool;
         glp_pool_hedged = _glp_pool_hedged;
+        initialized = true;
     }
 
     function buyGLP(
@@ -75,7 +85,12 @@ contract Treasury is Operator {
         IGLPPool(_glp_pool).handleWithdrawRequest(_address);
     }
 
-    function setCapacity(uint256 amount) external onlyOperator{
+    function setHedgeRatio(uint ratio) external onlyGovernance {
+        hedgeRatio = ratio;
+    }
+
+    function updateCapacity() external onlyOperator {
+        uint amount = IGLPPool(glp_pool_hedged).total_supply_staked() * hedgeRatio / 10000;
         IGLPPool(glp_pool).setCapacity(amount);
     }
 
