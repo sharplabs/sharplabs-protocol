@@ -10,12 +10,16 @@ import "../utils/token/SafeERC20.sol";
 contract Treasury is Operator {
 
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
-    address governance;
-    address glp_pool;
-    address glp_pool_hedged;
+    address public governance;
+    address public riskOffPool;
+    address public riskOnPool;
 
-    uint256 hedgeRatio = 10000;
+    uint256 public hedgeRatio = 10000;
+    uint256 public epoch;
+    uint256 public startTime;
+    uint256 public period = 8 hours;
 
     // flags
     bool public initialized = false;
@@ -30,7 +34,20 @@ contract Treasury is Operator {
         _;
     }
 
-    function initialize(address _governance, address _glp_pool, address _glp_pool_hedged) external notInitialized {
+    // epoch
+    function nextEpochPoint() public view returns (uint256) {
+        return startTime.add(epoch.mul(period));
+    }
+
+    function isInitialized() public view returns (bool) {
+        return initialized;
+    }
+
+    function initialize(
+        address _governance, 
+        address _glp_pool, 
+        address _glp_pool_hedged
+    ) public notInitialized {
         governance = _governance;
         glp_pool = _glp_pool;
         glp_pool_hedged = _glp_pool_hedged;
