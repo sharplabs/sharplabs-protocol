@@ -45,12 +45,12 @@ contract Treasury is Operator {
 
     function initialize(
         address _governance, 
-        address _glp_pool, 
-        address _glp_pool_hedged
+        address _riskOffPool, 
+        address _riskOnPool
     ) public notInitialized {
         governance = _governance;
-        glp_pool = _glp_pool;
-        glp_pool_hedged = _glp_pool_hedged;
+        riskOffPool = _riskOffPool;
+        riskOnPool = _riskOnPool;
         initialized = true;
     }
 
@@ -74,16 +74,16 @@ contract Treasury is Operator {
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
-    function sendPoolFunds(address _glp_pool, address _token, uint _amount) external onlyGovernance{
-        IERC20(_token).safeTransfer(_glp_pool, _amount);
+    function sendPoolFunds(address _riskOffPool, address _token, uint _amount) external onlyGovernance{
+        IERC20(_token).safeTransfer(_riskOffPool, _amount);
     }
 
-    function withdrawPoolFunds(address _glp_pool, address _token, uint _amount) external onlyGovernance{
-        IERC20(_token).safeTransferFrom(_glp_pool, address(this), _amount);
+    function withdrawPoolFunds(address _riskOffPool, address _token, uint _amount) external onlyGovernance{
+        IERC20(_token).safeTransferFrom(_riskOffPool, address(this), _amount);
     }
 
-    function allocateReward(address _glp_pool, uint256 _amount) public onlyGovernance{
-        IGLPPool(_glp_pool).allocateReward(_amount);
+    function allocateReward(address _riskOffPool, uint256 _amount) public onlyGovernance{
+        IGLPPool(_riskOffPool).allocateReward(_amount);
     }
 
     function deposit(address _token, uint256 amount) external onlyGovernance {
@@ -94,12 +94,12 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
-    function handleStakeRequest(address _glp_pool, address[] memory _address) public onlyGovernance{
-        IGLPPool(_glp_pool).handleStakeRequest(_address);
+    function handleStakeRequest(address _riskOffPool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_riskOffPool).handleStakeRequest(_address);
     }
 
-    function handleWithdrawRequest(address _glp_pool, address[] memory _address) public onlyGovernance{
-        IGLPPool(_glp_pool).handleWithdrawRequest(_address);
+    function handleWithdrawRequest(address _riskOffPool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_riskOffPool).handleWithdrawRequest(_address);
     }
 
     function setHedgeRatio(uint ratio) external onlyGovernance {
@@ -107,8 +107,8 @@ contract Treasury is Operator {
     }
 
     function updateCapacity() external onlyOperator {
-        uint amount = IGLPPool(glp_pool_hedged).total_supply_staked() * hedgeRatio / 10000;
-        IGLPPool(glp_pool).setCapacity(amount);
+        uint amount = IGLPPool(riskOnPool).total_supply_staked() * hedgeRatio / 10000;
+        IGLPPool(riskOffPool).setCapacity(amount);
     }
 
 }

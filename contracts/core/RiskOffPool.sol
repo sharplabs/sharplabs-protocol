@@ -48,7 +48,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
 
     // reward
-    address public totalReward;
+    uint256 public totalReward;
+    uint256 public currentReward;
 
     // governance
     address public treasury;
@@ -222,7 +223,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         if (reward > 0) {
             members[member].epochTimerStart = epoch(); // reset timer
             members[member].rewardEarned = 0;
-            token.safeTransfer(member, reward);
+        //    token.safeTransfer(member, reward);
             emit RewardPaid(member, reward);
         }
     }
@@ -323,6 +324,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
 
+        totalReward += amount;
         emit RewardAdded(msg.sender, amount);
     }
 }
