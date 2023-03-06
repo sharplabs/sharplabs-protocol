@@ -53,7 +53,7 @@ contract ShareWrapper {
         return _balances[account].withdraw;
     }
 
-    function stake(uint256 amount) public virtual {
+    function stake(uint256 amount) public payable virtual {
         _totalSupply.wait += amount;
         _balances[msg.sender].wait += amount;
         token.safeTransferFrom(msg.sender, address(this), amount);
