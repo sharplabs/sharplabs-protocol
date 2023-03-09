@@ -74,30 +74,36 @@ contract Treasury is Operator {
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
+    // send funds(ERC20 tokens) to pool
     function sendPoolFunds(address _pool, address _token, uint _amount) external onlyGovernance{
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
+    // withdraw pool funds(ERC20 tokens) to treasury
     function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance{
-        require()
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
 
+    // withdraw pool funds(ETH) to treasury
     function withdrawPoolFundsETH(address _pool, uint _amount, address _to) external onlyGovernance{
         IGLPPool(_pool).treasuryWithdrawFundsETH(_amount, _to);
     }
 
+    // allocate reward at every epoch
     function allocateReward(address _riskOffPool, uint256 _amount) public onlyGovernance{
         IGLPPool(_riskOffPool).allocateReward(_amount);
     }
 
+    // deposit funds from gov wallet to treasury
     function deposit(address _token, uint256 amount) external onlyGovernance {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
     }
 
+    // withdraw funds from treasury to gov wallet
     function withdraw(address _token, uint256 amount) external onlyGovernance {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
+
 
     function handleStakeRequest(address _riskOffPool, address[] memory _address) public onlyGovernance{
         IGLPPool(_riskOffPool).handleStakeRequest(_address);

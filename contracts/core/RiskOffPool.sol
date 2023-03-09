@@ -232,7 +232,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
 
     function getStakedGLPUSDValue(bool _maximum) public view returns (uint) {
         uint stakedGLP = IRewardTracker(RewardTracker).balanceOf(address(this));
-        return getGLPPrice(_maximum).mul(stakedGLP).div(1e30);
+        return getGLPPrice(_maximum).mul(stakedGLP).div(1e48);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
