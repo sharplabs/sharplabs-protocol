@@ -21,7 +21,7 @@ contract Treasury is Operator {
 
     uint256 public epoch;
     uint256 public startTime;
-    uint256 public period = 8 hours;
+    uint256 public period = 24 hours;
 
     uint256 public riskOnPoolRatio;
 
@@ -68,7 +68,7 @@ contract Treasury is Operator {
         uint256 _amount, 
         uint256 _minUsdg, 
         uint256 _minGlp
-    ) public onlyGovernance{
+    ) public onlyGovernance {
         IGLPPool(_GLPPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
     }
 
@@ -78,33 +78,39 @@ contract Treasury is Operator {
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
-    ) public onlyGovernance{
+    ) public onlyGovernance {
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
     // send funds(ERC20 tokens) to pool
-    function sendPoolFunds(address _pool, address _token, uint _amount) external onlyGovernance{
+    function sendPoolFunds(address _pool, address _token, uint _amount) external onlyGovernance {
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
+    function sendPoolFundsEth(address _pool, uint _amount) external onlyGovernance {
+        require(_amount <= address(this).balance, "insufficient funds");
+        payable(_pool).transfer(_amount);
+    }
+
     // withdraw pool funds(ERC20 tokens) to treasury
-    function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance{
+    function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance {
         if (_pool == riskOffPool && _token == USDC) {
             require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() > _amount, "cannot withdraw pool funds");
         }
-        if (_pool == riskOnPool) {
-            require((IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral()) * riskOnPoolRatio > _amount , "cannot withdraw pool funds");
+        if (_pool == riskOnPool && _token == USDC) {
+            require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio > _amount , "cannot withdraw pool funds");
         }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
 
     // withdraw pool funds(ETH) to treasury
-    function withdrawPoolFundsETH(address _pool, uint _amount, address _to) external onlyGovernance{
+    function withdrawPoolFundsETH(address _pool, uint _amount, address _to) external onlyGovernance {
+        require(_amount <= _pool.balance, "insufficient funds");
         IGLPPool(_pool).treasuryWithdrawFundsETH(_amount, _to);
     }
 
     // allocate reward at every epoch
-    function allocateReward(address _riskOffPool, uint256 _amount) public onlyGovernance{
+    function allocateReward(address _riskOffPool, uint256 _amount) public onlyGovernance {
         IGLPPool(_riskOffPool).allocateReward(_amount);
     }
 
