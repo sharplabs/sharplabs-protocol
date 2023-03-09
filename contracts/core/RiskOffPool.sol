@@ -297,8 +297,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = withdrawRequest[user].amount;
-            updateReward(user);
-            currentReward += claimReward(user);
+            uint reward = claimReward(user);
+            totalReward -= reward;
             _balances[user].staked -= amount;
             _totalSupply.staked -= amount;
             _balances[user].withdrawable += amount;
@@ -306,6 +306,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             members[user].epochTimerStart = _epoch; // reset timer
             delete withdrawRequest[user];
         }
+
     }
 
     function updateReward(address member) internal onlyOneBlock {
