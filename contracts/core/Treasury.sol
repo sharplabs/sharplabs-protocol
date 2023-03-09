@@ -124,7 +124,6 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
-
     function handleStakeRequest(address _pool, address[] memory _address) public onlyGovernance {
         IGLPPool(_pool).handleStakeRequest(_address);
     }

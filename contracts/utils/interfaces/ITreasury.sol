@@ -13,6 +13,8 @@ interface ITreasury {
 
     function transferOperator(address newOperator_) external;
 
+    function period() external view returns (uint256);
+    
     function epoch() external view returns (uint256);
 
     function nextEpochPoint() external view returns (uint256);

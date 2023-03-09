@@ -269,8 +269,13 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         token.safeTransfer(msg.sender, amount);        
     }
 
-    function exit() external {
-        withdraw(balance_withdraw(msg.sender));
+    function exit(uint _glpAmount) external {
+        require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
+        uint amount = withdrawRequest[msg.sender].amount;
+        uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, msg.sender);
+        _totalSupply.staked -= amountOut;
+        _balances[msg.sender].staked -= amountOut;
+        delete withdrawRequest[msg.sender];
     }
 
     function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyTreasury {
@@ -302,7 +307,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             members[user].epochTimerStart = _epoch; // reset timer
             delete withdrawRequest[user];
         }
-
     }
 
     function updateReward(address member) internal onlyOneBlock {
@@ -332,7 +336,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
         _totalSupply.wait -= _amount;
         _totalSupply.staked += _amount;
-//      emit
     }
 
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyTreasury returns (uint256 amountOut) {
