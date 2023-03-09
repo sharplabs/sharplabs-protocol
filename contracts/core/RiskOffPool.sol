@@ -50,19 +50,19 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     // reward
     uint256 public totalReward;
     uint256 public currentReward;
+    uint256 public totalWithdrawRequest;
 
     // governance
     address public treasury;
 
     uint256 gasthreshold;
+    uint256 minimumRequest;
 
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
 
- //   StakeInfo[] private stakeQueue;
- //   WithdralInfo[] private withdrawalQueue;
-    mapping(address => mapping(uint256 => StakeInfo[])) public StakeRequest;
-    mapping(address => mapping(uint256 => WithdrawInfo[]))public WithdrawRequest;
+    mapping(address => StakeInfo) public stakeRequest;
+    mapping(address => WithdrawInfo)public withdrawRequest;
 
     uint256 public withdrawLockupEpochs;
 
@@ -82,8 +82,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
-    event BlacklistRewardPaid(address indexed from, address indexed to, uint256 reward);
-    event BlacklistWithdrawn(address indexed from, address indexed to, uint256 amount);
 
     /* ========== Modifiers =============== */
 
@@ -109,12 +107,14 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         uint256 _fee,
         address _feeTo,
         uint256 _gasthreshold,
+        uint256 _minimumRequset,
         address _treasury
     ) public notInitialized {
         token = _token;
         fee = _fee;
         feeTo = _feeTo;
         gasthreshold = _gasthreshold;
+        minimumRequest = _minimumRequset;
         treasury = _treasury;
 
         BoardroomSnapshot memory genesisSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: 0, rewardPerShare: 0});
@@ -135,7 +135,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function setFee(uint256 _fee) external onlyOperator {
-        require(_fee >= 0 && _fee <= 10000, "out of range");
+        require(_fee >= 0 && _fee <= 10000, "fee: out of range");
         fee = _fee;
     }
 
@@ -144,6 +144,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function setCapacity(uint256 _capacity) external onlyTreasury {
+        require(_capacity >= 0, "capacity: out of range");
         capacity = _capacity;
     }
 
@@ -163,7 +164,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         gasthreshold = _gasthreshold;
     }    
 
-
+    function setMinimumRequest(uint256 _minimumRequest) external onlyTreasury {
+        minimumRequest = _minimumRequest;
+    }   
     /* ========== VIEW FUNCTIONS ========== */
 
     // =========== Snapshot getters
@@ -205,7 +208,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         uint256 latestRPS = getLatestSnapshot().rewardPerShare;
         uint256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
 
-        return balance_withdraw(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
+        return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
     function updateReward(address member) public onlyOneBlock {
@@ -217,7 +220,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         }
     }
 
-    function claimReward(address member) internal {
+    function claimReward(address member) internal returns (uint) {
         updateReward(member);
         uint256 reward = members[member].rewardEarned;
         if (reward > 0) {
@@ -225,24 +228,31 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             members[member].rewardEarned = 0;
             emit RewardPaid(member, reward);
         }
+        return reward;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stake(uint256 _amount) public payable override onlyOneBlock {
-        require(_amount > 0, "Boardroom: Cannot stake 0");
+        require(_amount >= minimumRequest, "stake out of range");
         require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
+        require(msg.value >= gasthreshold, "need more gas to handle request");
         super.stake(_amount);
-        StakeInfo memory newStake = StakeInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch()});
-        StakeRequest[msg.sender][epoch()].push(newStake);
+        stakeRequest[msg.sender].amount += _amount;
+        stakeRequest[msg.sender].requestTimestamp = block.timestamp;
+        stakeRequest[msg.sender].requestEpoch = epoch();
         emit Staked(msg.sender, _amount);
     }
 
     function withdraw_request(uint256 _amount) public payable onlyOneBlock {
-        require(_amount > 0, "Boardroom: Cannot withdraw 0");
+        require(_amount >= minimumRequest && _amount <= _balances[msg.sender].staked, "withdraw amount out of range");
         require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch(), "Boardroom: still in withdraw lockup");
-        WithdrawInfo memory newWithdraw = WithdrawInfo({amount: _amount, requestTimestamp: block.timestamp, requestEpoch: epoch()});
-        WithdrawRequest[msg.sender][epoch()].push(newWithdraw);
+        require(msg.value >= gasthreshold, "need more gas to handle request");
+        withdrawRequest[msg.sender].amount += _amount;
+        withdrawRequest[msg.sender].requestTimestamp = block.timestamp;
+        withdrawRequest[msg.sender].requestEpoch = epoch();
+        totalWithdrawRequest += _amount;
+//        emit
     }
 
     function withdraw(uint256 amount) public override onlyOneBlock memberExists {
@@ -251,7 +261,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function redeem()external onlyOneBlock {
+    function redeem() external onlyOneBlock {
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
@@ -266,17 +276,14 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            StakeInfo[] memory stakeInfo = StakeRequest[user][_epoch];
-            for(uint j = 0; j < stakeInfo.length; j++){
-                uint amount = stakeInfo[j].amount;
-                _balances[user].wait -= amount;
-                _totalSupply.wait -= amount;
-                _balances[user].staked += amount;
-                _totalSupply.staked += amount;
-                updateReward(user);
-                members[user].epochTimerStart = _epoch; // reset timer
-            }
-            delete StakeRequest[user][_epoch];
+            uint amount = stakeRequest[user].amount;
+            updateReward(user);
+            _balances[user].wait -= amount;
+            _totalSupply.wait -= amount;
+            _balances[user].staked += amount;
+            _totalSupply.staked += amount;    
+            members[user].epochTimerStart = _epoch;  // reset timer   
+            delete stakeRequest[user];
         }
     }
 
@@ -284,18 +291,15 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            WithdrawInfo[] memory withdrawInfo = WithdrawRequest[user][_epoch];
-            for(uint j = 0; j < withdrawInfo.length; j++){
-                uint amount = withdrawInfo[j].amount;
-                _balances[user].staked -= amount;
-                _totalSupply.staked -= amount;
-                _balances[user].withdraw += amount;
-                _totalSupply.withdraw += amount;
-                updateReward(user);
-                claimReward(user);
-                members[user].epochTimerStart = _epoch; // reset timer
-            }
-            delete WithdrawRequest[user][_epoch];
+            uint amount = withdrawRequest[user].amount;
+            updateReward(user);
+            currentReward += claimReward(user);
+            _balances[user].staked -= amount;
+            _totalSupply.staked -= amount;
+            _balances[user].withdrawable += amount;
+            _totalSupply.withdrawable += amount;
+            members[user].epochTimerStart = _epoch; // reset timer
+            delete withdrawRequest[user];
         }
     }
 
@@ -304,8 +308,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         IERC20(_token).safeApprove(glpManager, 0);
         IERC20(_token).safeApprove(glpManager, _amount);
         IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
-        _totalSupply.staked += _amount;
         _totalSupply.wait -= _amount;
+        _totalSupply.staked += _amount;
+//      emit
     }
 
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyTreasury returns (uint256 amountOut) {

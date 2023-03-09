@@ -60,8 +60,8 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
 
  //   StakeInfo[] private stakeQueue;
  //   WithdralInfo[] private withdrawalQueue;
-    mapping(address => mapping(uint256 => StakeInfo[])) public StakeRequest;
-    mapping(address => mapping(uint256 => WithdrawInfo[]))public WithdrawRequest;
+    mapping(address => StakeInfo) public StakeRequest;
+    mapping(address => WithdrawInfo)public WithdrawRequest;
 
     uint256 public withdrawLockupEpochs;
 

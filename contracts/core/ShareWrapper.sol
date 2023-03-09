@@ -17,13 +17,13 @@ contract ShareWrapper {
     struct TotalSupply {
         uint256 wait;
         uint256 staked;
-        uint256 withdraw;
+        uint256 withdrawable;
     }
 
     struct Balances {
         uint256 wait;
         uint256 staked;
-        uint256 withdraw;
+        uint256 withdrawable;
     }
 
     mapping(address => Balances) internal _balances;
@@ -38,7 +38,7 @@ contract ShareWrapper {
     }
 
     function total_supply_withdraw() public view returns (uint256) {
-        return _totalSupply.withdraw;
+        return _totalSupply.withdrawable;
     }
 
     function balance_wait(address account) public view returns (uint256) {
@@ -50,7 +50,7 @@ contract ShareWrapper {
     }
 
     function balance_withdraw(address account) public view returns (uint256) {
-        return _balances[account].withdraw;
+        return _balances[account].withdrawable;
     }
 
     function stake(uint256 amount) public payable virtual {
@@ -60,9 +60,9 @@ contract ShareWrapper {
     }
 
     function withdraw(uint256 amount) public virtual {
-        require(_balances[msg.sender].withdraw >= amount, "Boardroom: withdraw request greater than staked amount");
-        _totalSupply.withdraw -= amount;
-        _balances[msg.sender].withdraw -= amount;
+        require(_balances[msg.sender].withdrawable >= amount, "Boardroom: withdraw request greater than staked amount");
+        _totalSupply.withdrawable -= amount;
+        _balances[msg.sender].withdrawable -= amount;
         if (fee > 0) {
             uint tax = amount.mul(fee).div(10000);
             amount = amount.sub(tax);
