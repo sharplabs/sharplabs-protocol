@@ -208,7 +208,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/utils/interfaces/IUniswapV2Factory.sol": "IUniswapV2Factory"
+			"sharplabs/contracts/utils/interfaces/IUniswapV2Factory.sol": "IUniswapV2Factory"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -222,7 +222,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/utils/interfaces/IUniswapV2Factory.sol": {
+		"sharplabs/contracts/utils/interfaces/IUniswapV2Factory.sol": {
 			"keccak256": "0xf9e0953e03d3f3a324ce74911d61af20517308abe6865b2f1d1ffbdb46349179",
 			"license": "MIT",
 			"urls": [

@@ -10,6 +10,7 @@ import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "../utils/interfaces/ITreasury.sol";
 import "../utils/interfaces/IRewardTracker.sol";
+import "../utils/interfaces/IGlpManager.sol";
 import "./ShareWrapper.sol";
 
 contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
@@ -217,7 +218,10 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
-    function get
+    function getGLPPrice(bool _maximum) public view returns (uint256) {
+        return IGlpManager(glpManager).getPrice(_maximum);
+    }
+
     function getTotalUSDValue() public view returns (uint) {
         return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable;
     }
@@ -226,9 +230,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return getTotalUSDValue() + totalReward;
     }
 
-    function getStakedGLPUSDValue() public view returns (uint) {
+    function getStakedGLPUSDValue(bool _maximum) public view returns (uint) {
         uint stakedGLP = IRewardTracker(RewardTracker).balanceOf(address(this));
-
+        return getGLPPrice(_maximum).mul(stakedGLP).div(1e30);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
