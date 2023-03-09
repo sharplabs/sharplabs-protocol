@@ -36,5 +36,9 @@ interface IGLPPool {
     function treasuryWithdrawFunds(address token, uint256 amount, address to) external;
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external;
+
+    function getStakedGLPUSDValue() external view returns (uint);
+
+    function getRequiredCollateral() external view returns (uint);
 }    
     

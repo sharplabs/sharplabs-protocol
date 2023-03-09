@@ -81,6 +81,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
 
     event Initialized(address indexed executor, uint256 at);
     event Staked(address indexed user, uint256 amount);
+    event WithdrawRequest(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
@@ -252,7 +253,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         withdrawRequest[msg.sender].requestTimestamp = block.timestamp;
         withdrawRequest[msg.sender].requestEpoch = epoch();
         totalWithdrawRequest += _amount;
-//        emit
+        emit WithdrawRequest(msg.sender, _amount);
     }
 
     function withdraw(uint256 amount) public override onlyOneBlock memberExists {

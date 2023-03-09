@@ -12,13 +12,18 @@ contract Treasury is Operator {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
+    address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+
     address public governance;
     address public riskOffPool;
     address public riskOnPool;
 
+
     uint256 public epoch;
     uint256 public startTime;
     uint256 public period = 8 hours;
+
+    uint256 public riskOnPoolRatio;
 
     // flags
     bool public initialized = false;
@@ -46,11 +51,13 @@ contract Treasury is Operator {
         address _governance, 
         address _riskOffPool, 
         address _riskOnPool,
+        uint256 _riskOnPoolRatio,
         uint256 _startTime
     ) public notInitialized {
         governance = _governance;
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
+        riskOnPoolRatio = _riskOnPoolRatio;
         startTime = _startTime;
         initialized = true;
     }
@@ -82,6 +89,12 @@ contract Treasury is Operator {
 
     // withdraw pool funds(ERC20 tokens) to treasury
     function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance{
+        if (_pool == riskOffPool && _token == USDC) {
+            require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() > _amount, "cannot withdraw pool funds");
+        }
+        if (_pool == riskOnPool) {
+            require((IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral()) * riskOnPoolRatio > _amount , "cannot withdraw pool funds");
+        }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
 
