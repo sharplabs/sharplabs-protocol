@@ -32,5 +32,9 @@ interface IGLPPool {
     function allocateReward(uint256 _amount) external;
 
     function setCapacity(uint256 _amount) external;
+
+    function treasuryWithdrawFunds(address token, uint256 amount, address to) external;
+
+    function treasuryWithdrawFundsETH(uint256 amount, address to) external;
 }    
     

@@ -333,4 +333,13 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         totalReward += amount;
         emit RewardAdded(msg.sender, amount);
     }
+
+    function treasuryWithdrawFunds(address token, uint256 amount, address to) external onlyTreasury {
+        IERC20(token).safeTransfer(to, amount);
+    }
+
+    function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
+        payable(to).transfer(amount);
+    }
+
 }
