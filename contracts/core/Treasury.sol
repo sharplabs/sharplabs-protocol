@@ -98,7 +98,7 @@ contract Treasury is Operator {
             require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() > _amount, "cannot withdraw pool funds");
         }
         if (_pool == riskOnPool && _token == USDC) {
-            require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio > _amount , "cannot withdraw pool funds");
+            require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 > _amount , "cannot withdraw pool funds");
         }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }

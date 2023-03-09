@@ -272,9 +272,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     function exit(uint _glpAmount) external {
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
         uint amount = withdrawRequest[msg.sender].amount;
-        uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, msg.sender);
-        _totalSupply.staked -= amountOut;
-        _balances[msg.sender].staked -= amountOut;
+        IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, msg.sender);
+        _totalSupply.staked -= amount;
+        _balances[msg.sender].staked -= amount;
         delete withdrawRequest[msg.sender];
     }
 
@@ -309,7 +309,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         }
     }
 
-    function updateReward(address member) internal onlyOneBlock {
+    function updateReward(address member) internal {
         if (member != address(0)) {
             Memberseat memory seat = members[member];
             seat.rewardEarned = earned(member);
