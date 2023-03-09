@@ -105,12 +105,12 @@ contract Treasury is Operator {
     }
 
 
-    function handleStakeRequest(address _riskOffPool, address[] memory _address) public onlyGovernance{
-        IGLPPool(_riskOffPool).handleStakeRequest(_address);
+    function handleStakeRequest(address _pool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_pool).handleStakeRequest(_address);
     }
 
-    function handleWithdrawRequest(address _riskOffPool, address[] memory _address) public onlyGovernance{
-        IGLPPool(_riskOffPool).handleWithdrawRequest(_address);
+    function handleWithdrawRequest(address _pool, address[] memory _address) public onlyGovernance{
+        IGLPPool(_pool).handleWithdrawRequest(_address);
     }
 
     function setHedgeRatio(uint ratio) external onlyGovernance {

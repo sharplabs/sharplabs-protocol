@@ -249,7 +249,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function withdraw_request(uint256 _amount) public payable onlyOneBlock {
-        require(_amount >= minimumRequest && _amount <= _balances[msg.sender].staked, "withdraw amount out of range");
+        require(_amount >= minimumRequest, "withdraw amount too low");
+        require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount out of range");
         require(members[msg.sender].epochTimerStart.add(withdrawLockupEpochs) <= epoch(), "Boardroom: still in withdraw lockup");
         require(msg.value >= gasthreshold, "need more gas to handle request");
         withdrawRequest[msg.sender].amount += _amount;
