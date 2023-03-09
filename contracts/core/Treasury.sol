@@ -16,7 +16,6 @@ contract Treasury is Operator {
     address public riskOffPool;
     address public riskOnPool;
 
-    uint256 public hedgeRatio = 10000;
     uint256 public epoch;
     uint256 public startTime;
     uint256 public period = 8 hours;
@@ -46,11 +45,13 @@ contract Treasury is Operator {
     function initialize(
         address _governance, 
         address _riskOffPool, 
-        address _riskOnPool
+        address _riskOnPool,
+        uint256 _startTime
     ) public notInitialized {
         governance = _governance;
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
+        startTime = _startTime;
         initialized = true;
     }
 
@@ -105,21 +106,20 @@ contract Treasury is Operator {
     }
 
 
-    function handleStakeRequest(address _pool, address[] memory _address) public onlyGovernance{
+    function handleStakeRequest(address _pool, address[] memory _address) public onlyGovernance {
         IGLPPool(_pool).handleStakeRequest(_address);
     }
 
-    function handleWithdrawRequest(address _pool, address[] memory _address) public onlyGovernance{
+    function handleWithdrawRequest(address _pool, address[] memory _address) public onlyGovernance {
         IGLPPool(_pool).handleWithdrawRequest(_address);
     }
 
-    function setHedgeRatio(uint ratio) external onlyGovernance {
-        hedgeRatio = ratio;
+    function updateEpoch() external onlyGovernance {
+        epoch += 1;
     }
 
-    function updateCapacity() external onlyOperator {
-        uint amount = IGLPPool(riskOnPool).total_supply_staked() * hedgeRatio / 10000;
-        IGLPPool(riskOffPool).setCapacity(amount);
-    }
-
+    function updateCapacity(uint riskOffPoolCapacity, uint riskOnPoolCapacity) external onlyGovernance {
+        IGLPPool(riskOffPool).setCapacity(riskOffPoolCapacity);
+        IGLPPool(riskOnPool).setCapacity(riskOnPoolCapacity);
+    } 
 }

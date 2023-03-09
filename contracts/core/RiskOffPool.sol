@@ -51,7 +51,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
 
     // reward
     uint256 public totalReward;
-    uint256 public currentReward;
     uint256 public totalWithdrawRequest;
 
     // governance
@@ -218,16 +217,12 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
+    function getRequiredCollateral() public view returns (uint) {
+        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + totalReward;
+    }
+
     function getGLPPrice(bool _maximum) public view returns (uint256) {
         return IGlpManager(glpManager).getPrice(_maximum);
-    }
-
-    function getTotalUSDValue() public view returns (uint) {
-        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable;
-    }
-
-    function getTotalUSDValueWithRewards() public view returns (uint) {
-        return getTotalUSDValue() + totalReward;
     }
 
     function getStakedGLPUSDValue(bool _maximum) public view returns (uint) {
