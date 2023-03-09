@@ -9,6 +9,7 @@ import "../utils/security/ContractGuard.sol";
 import "../utils/access/Operator.sol";
 import "../utils/interfaces/IGLPRouter.sol";
 import "../utils/interfaces/ITreasury.sol";
+import "../utils/interfaces/IRewardTracker.sol";
 import "./ShareWrapper.sol";
 
 contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
@@ -73,6 +74,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
 
     address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     address public glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
+    address public RewardTracker = 0x1aDDD80E6039594eE970E5872D247bf0414C8903;
 
 
     /* ========== EVENTS ========== */
@@ -148,15 +150,19 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         capacity = _capacity;
     }
 
-    function setGlpRouter(address _glpRouter) external onlyTreasury {
+    function setGlpRouter(address _glpRouter) external onlyOperator {
         glpRouter = _glpRouter;
     }
 
-    function setGlpManager(address _glpManager) external onlyTreasury {
+    function setGlpManager(address _glpManager) external onlyOperator {
         glpManager = _glpManager;
     }
 
-    function setTreasury(address _treasury) external onlyTreasury {
+    function setRewardTracker(address _RewardTracker) external onlyOperator {
+        RewardTracker = _RewardTracker;
+    }
+
+    function setTreasury(address _treasury) external onlyOperator {
         treasury = _treasury;
     }
 
@@ -211,24 +217,18 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
-    function updateReward(address member) public onlyOneBlock {
-        if (member != address(0)) {
-            Memberseat memory seat = members[member];
-            seat.rewardEarned = earned(member);
-            seat.lastSnapshotIndex = latestSnapshotIndex();
-            members[member] = seat;
-        }
+    function get
+    function getTotalUSDValue() public view returns (uint) {
+        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable;
     }
 
-    function claimReward(address member) internal returns (uint) {
-        updateReward(member);
-        uint256 reward = members[member].rewardEarned;
-        if (reward > 0) {
-            members[member].epochTimerStart = epoch(); // reset timer
-            members[member].rewardEarned = 0;
-            emit RewardPaid(member, reward);
-        }
-        return reward;
+    function getTotalUSDValueWithRewards() public view returns (uint) {
+        return getTotalUSDValue() + totalReward;
+    }
+
+    function getStakedGLPUSDValue() public view returns (uint) {
+        uint stakedGLP = IRewardTracker(RewardTracker).balanceOf(address(this));
+
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -301,6 +301,26 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             members[user].epochTimerStart = _epoch; // reset timer
             delete withdrawRequest[user];
         }
+    }
+
+    function updateReward(address member) internal onlyOneBlock {
+        if (member != address(0)) {
+            Memberseat memory seat = members[member];
+            seat.rewardEarned = earned(member);
+            seat.lastSnapshotIndex = latestSnapshotIndex();
+            members[member] = seat;
+        }
+    }
+
+    function claimReward(address member) internal returns (uint) {
+        updateReward(member);
+        uint256 reward = members[member].rewardEarned;
+        if (reward > 0) {
+            members[member].epochTimerStart = epoch(); // reset timer
+            members[member].rewardEarned = 0;
+            emit RewardPaid(member, reward);
+        }
+        return reward;
     }
 
     function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {

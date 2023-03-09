@@ -79,6 +79,7 @@ contract Treasury is Operator {
     }
 
     function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance{
+        require()
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
 
