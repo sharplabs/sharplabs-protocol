@@ -20,5 +20,15 @@ interface IGLPRouter {
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
-    ) external returns (uint256) ;
+    ) external returns (uint256);
+
+    function handleRwards(
+        bool _shouldClaimGmx,
+        bool _shouldStakeGmx,
+        bool _shouldClaimEsGmx,
+        bool _shouldStakeEsGmx,
+        bool _shouldStakeMultiplierPoints,
+        bool _shouldClaimWeth,
+        bool _shouldConvertWethToEth
+    ) external;
 }

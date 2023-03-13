@@ -85,6 +85,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     event Withdrawn(address indexed user, uint256 amount);
     event Redeemed(address indexed user, uint256 amount);
     event StakedByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
+    event StakedETHByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event WithdrawnByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
@@ -357,23 +358,37 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         emit StakedByGov(epoch(), _amount, block.timestamp);
     }
 
-/*
-    function stakeByGovETH(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
+    function stakeETHByGov(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
         require(amount <= address(this).balance, "not enough funds");
         IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
+        emit StakedETHByGov(epoch(), amount, block.timestamp);
     }
-*/
 
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) public onlyOneBlock onlyTreasury {
         IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
-/*
-    function handleRwards() external onlyOneBlock onlyTreasury {
 
+    function handleRwards(
+        bool _shouldClaimGmx,
+        bool _shouldStakeGmx,
+        bool _shouldClaimEsGmx,
+        bool _shouldStakeEsGmx,
+        bool _shouldStakeMultiplierPoints,
+        bool _shouldClaimWeth,
+        bool _shouldConvertWethToEth
+    ) external onlyTreasury {
+        IGLPRouter(glpRouter).handleRwards(
+            _shouldClaimGmx,
+            _shouldStakeGmx,
+            _shouldClaimEsGmx,
+            _shouldStakeEsGmx,
+            _shouldStakeMultiplierPoints,
+            _shouldClaimWeth,
+            _shouldConvertWethToEth);
     }
-*/
+
 
     function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");

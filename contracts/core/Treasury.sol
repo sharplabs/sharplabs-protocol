@@ -84,6 +84,7 @@ contract Treasury is Operator {
 
     // send funds(ERC20 tokens) to pool
     function sendPoolFunds(address _pool, address _token, uint _amount) external onlyGovernance {
+        require(_amount <= IERC20(_token).balanceOf(address(this)), "insufficient funds");
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
@@ -130,6 +131,26 @@ contract Treasury is Operator {
 
     function handleWithdrawRequest(address _pool, address[] memory _address) public onlyGovernance {
         IGLPPool(_pool).handleWithdrawRequest(_address);
+    }
+    
+    function handleRwards(
+        address _pool,
+        bool _shouldClaimGmx,
+        bool _shouldStakeGmx,
+        bool _shouldClaimEsGmx,
+        bool _shouldStakeEsGmx,
+        bool _shouldStakeMultiplierPoints,
+        bool _shouldClaimWeth,
+        bool _shouldConvertWethToEth
+    ) external onlyGovernance {
+        IGLPPool(_pool).handleRwards(
+            _shouldClaimGmx,
+            _shouldStakeGmx,
+            _shouldClaimEsGmx,
+            _shouldStakeEsGmx,
+           _shouldStakeMultiplierPoints,
+           _shouldClaimWeth,
+           _shouldConvertWethToEth);
     }
 
     function updateEpoch() external onlyGovernance {

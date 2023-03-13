@@ -49,12 +49,56 @@
 		},
 		"gasEstimates": null,
 		"methodIdentifiers": {
+			"handleRwards(bool,bool,bool,bool,bool,bool,bool)": "2a442619",
 			"mintAndStakeGlp(address,uint256,uint256,uint256)": "364e2311",
 			"mintAndStakeGlpETH(uint256,uint256)": "53a8aa03",
 			"unstakeAndRedeemGlp(address,uint256,uint256,address)": "0f3aa554"
 		}
 	},
 	"abi": [
+		{
+			"inputs": [
+				{
+					"internalType": "bool",
+					"name": "_shouldClaimGmx",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldStakeGmx",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldClaimEsGmx",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldStakeEsGmx",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldStakeMultiplierPoints",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldClaimWeth",
+					"type": "bool"
+				},
+				{
+					"internalType": "bool",
+					"name": "_shouldConvertWethToEth",
+					"type": "bool"
+				}
+			],
+			"name": "handleRwards",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
 		{
 			"inputs": [
 				{

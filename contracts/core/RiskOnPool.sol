@@ -83,8 +83,13 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     event Staked(address indexed user, uint256 amount);
     event WithdrawRequest(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
+    event Redeemed(address indexed user, uint256 amount);
+    event StakedByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
+    event StakedETHByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
+    event WithdrawnByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
+    event Exit(address indexed user, uint256 amount);
 
     /* ========== Modifiers =============== */
 
@@ -167,11 +172,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         treasury = _treasury;
     }
 
-    function setGasThreshold(uint256 _gasthreshold) external onlyTreasury {
+    function setGasThreshold(uint256 _gasthreshold) external onlyOperator {
         gasthreshold = _gasthreshold;
     }    
 
-    function setMinimumRequest(uint256 _minimumRequest) external onlyTreasury {
+    function setMinimumRequest(uint256 _minimumRequest) external onlyOperator {
         minimumRequest = _minimumRequest;
     }   
     /* ========== VIEW FUNCTIONS ========== */
@@ -211,6 +216,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         return getLatestSnapshot().rewardPerShare;
     }
 
+    // calculate earned reward of specified user
     function earned(address member) public view returns (uint256) {
         uint256 latestRPS = getLatestSnapshot().rewardPerShare;
         uint256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
@@ -218,23 +224,30 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
-    function getRequiredCollateral() public view returns (uint) {
+    // required usd collateral in the contract
+    function getRequiredCollateral() public view returns (uint256) {
         return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + totalReward;
     }
 
+    // glp price
     function getGLPPrice(bool _maximum) public view returns (uint256) {
         return IGlpManager(glpManager).getPrice(_maximum);
     }
 
+    // staked glp amount
+    function getStakedGLP() public view returns (uint256) {
+        return IRewardTracker(RewardTracker).balanceOf(address(this));
+    }
+
+    // staked glp usd value
     function getStakedGLPUSDValue(bool _maximum) public view returns (uint) {
-        uint stakedGLP = IRewardTracker(RewardTracker).balanceOf(address(this));
-        return getGLPPrice(_maximum).mul(stakedGLP).div(1e48);
+        return getGLPPrice(_maximum).mul(getStakedGLP()).div(1e42);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stake(uint256 _amount) public payable override onlyOneBlock {
-        require(_amount >= minimumRequest, "stake out of range");
+        require(_amount >= minimumRequest, "stake amount too low");
         require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
         require(msg.value >= gasthreshold, "need more gas to handle request");
         super.stake(_amount);
@@ -266,19 +279,25 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
-        token.safeTransfer(msg.sender, amount);        
+        token.safeTransfer(msg.sender, amount);     
+        emit Redeemed(msg.sender, amount);   
     }
 
-    function exit(uint _glpAmount) external {
+
+    function exit() external {
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
-        uint amount = withdrawRequest[msg.sender].amount;
-        IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, address(this));
+        uint amount = _balances[msg.sender].staked;
+        uint _glpAmount = amount.mul(1e42).div(getGLPPrice(false));
+        uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, 0, address(this));
+        require(amountOut <= amount, "withdraw overflow");
         _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
         _totalSupply.withdrawable += amount;
         _balances[msg.sender].withdrawable += amount;
         delete withdrawRequest[msg.sender];
+        emit Exit(msg.sender, amount);
     }
+
 
     function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyTreasury {
         uint256 _epoch = epoch();
@@ -290,7 +309,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.wait -= amount;
             _balances[user].staked += amount;
             _totalSupply.staked += amount;    
-            totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch;  // reset timer   
             delete stakeRequest[user];
         }
@@ -307,6 +325,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.staked -= amount;
             _balances[user].withdrawable += amount;
             _totalSupply.withdrawable += amount;
+            totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch; // reset timer
             delete withdrawRequest[user];
         }
@@ -333,24 +352,23 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
-        require(_totalSupply.wait > 0, "Boardroom: Cannot stake 0");
         IERC20(_token).safeApprove(glpManager, 0);
         IERC20(_token).safeApprove(glpManager, _amount);
         IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
-        _totalSupply.wait -= _amount;
-        _totalSupply.staked += _amount;
+        emit StakedByGov(epoch(), _amount, block.timestamp);
     }
 
-/*
-    function stakeByGovETH(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
+
+    function stakeETHByGov(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
         require(amount <= address(this).balance, "not enough funds");
         IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
+        emit StakedETHByGov(epoch(), amount, block.timestamp);
     }
-*/
-    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyTreasury returns (uint256 amountOut) {
-        require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
-        amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
-        _totalSupply.staked -= amountOut;
+
+
+    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) public onlyOneBlock onlyTreasury {
+        IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+        emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
 /*
@@ -358,6 +376,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
 
     }
 */
+
     function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
@@ -380,5 +399,4 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
         payable(to).transfer(amount);
     }
-
 }

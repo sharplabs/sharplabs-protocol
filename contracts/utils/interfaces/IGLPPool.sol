@@ -3,12 +3,7 @@
 pragma solidity 0.8.13;
 
 interface IGLPPool {
-
-    function receiveFundsAndReward(
-        address _token,
-        uint _amount
-    ) external;
-
+    
     function stakeByGov(
         address _token, 
         uint256 _amount, 
@@ -21,6 +16,16 @@ interface IGLPPool {
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
+    ) external;
+
+    function handleRwards(
+        bool _shouldClaimGmx,
+        bool _shouldStakeGmx,
+        bool _shouldClaimEsGmx,
+        bool _shouldStakeEsGmx,
+        bool _shouldStakeMultiplierPoints,
+        bool _shouldClaimWeth,
+        bool _shouldConvertWethToEth
     ) external;
 
     function total_supply_staked() external returns (uint);

@@ -8,6 +8,49 @@
 			{
 				"inputs": [
 					{
+						"internalType": "bool",
+						"name": "_shouldClaimGmx",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldStakeGmx",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldClaimEsGmx",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldStakeEsGmx",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldStakeMultiplierPoints",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldClaimWeth",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "_shouldConvertWethToEth",
+						"type": "bool"
+					}
+				],
+				"name": "handleRwards",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "address",
 						"name": "_token",
 						"type": "address"
@@ -126,11 +169,11 @@
 	},
 	"sources": {
 		"sharplabs/contracts/utils/interfaces/IGLPRouter.sol": {
-			"keccak256": "0xe729864ba233048a138712798c057952bec0a0bde9d3f8636b9bd6c832ff69f7",
+			"keccak256": "0x42caf7dc42ac0a2bea96eed4cc6a34e745e04f806fefceae5102dc4c53e91e2e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://cb9e34967fce77ddbe463ffcf24e4db0ca481ff7b7c83c6acc45244bd5c0fde8",
-				"dweb:/ipfs/QmNotBUD8EjdnByEbocwNxfeoYxgWwintxhG5Hvabr6EPB"
+				"bzz-raw://59ca3e524888c1a6841194eac255a8c43f5734044105ebf57330ea4a7d2d0f3e",
+				"dweb:/ipfs/QmNmzJH2LvxLSne2vMCKEs8rrvpBn9jv9Bwrzvwp8MmHey"
 			]
 		}
 	},
