@@ -3,7 +3,7 @@
 pragma solidity 0.8.13;
 
 interface IGLPPool {
-    
+
     function stakeByGov(
         address _token, 
         uint256 _amount, 
@@ -42,7 +42,7 @@ interface IGLPPool {
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external;
 
-    function getStakedGLPUSDValue() external view returns (uint);
+    function getStakedGLPUSDValue(bool _maximum) external view returns (uint);
 
     function getRequiredCollateral() external view returns (uint);
 }    
