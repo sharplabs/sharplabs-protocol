@@ -133,6 +133,7 @@ contract Treasury is Operator {
     }
 
     function updateEpoch() external onlyGovernance {
+        require(block.timestamp >= nextEpochPoint(), "Treasury: not opened yet");
         epoch += 1;
     }
 

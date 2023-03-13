@@ -10,6 +10,11 @@ interface IGLPRouter {
         uint256 _minGlp
     ) external returns (uint256);
 
+    function mintAndStakeGlpETH(
+        uint256 _minUsdg, 
+        uint256 _minGlp       
+    ) external payable returns (uint256);
+
     function unstakeAndRedeemGlp(
         address _tokenOut, 
         uint256 _glpAmount, 

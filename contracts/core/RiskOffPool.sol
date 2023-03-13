@@ -167,11 +167,11 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         treasury = _treasury;
     }
 
-    function setGasThreshold(uint256 _gasthreshold) external onlyTreasury {
+    function setGasThreshold(uint256 _gasthreshold) external onlyOperator {
         gasthreshold = _gasthreshold;
     }    
 
-    function setMinimumRequest(uint256 _minimumRequest) external onlyTreasury {
+    function setMinimumRequest(uint256 _minimumRequest) external onlyOperator {
         minimumRequest = _minimumRequest;
     }   
     /* ========== VIEW FUNCTIONS ========== */
@@ -211,6 +211,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return getLatestSnapshot().rewardPerShare;
     }
 
+    // calculate earned reward of specified user
     function earned(address member) public view returns (uint256) {
         uint256 latestRPS = getLatestSnapshot().rewardPerShare;
         uint256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
@@ -218,17 +219,24 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         return balance_staked(member).mul(latestRPS.sub(storedRPS)).div(1e18).add(members[member].rewardEarned);
     }
 
+    // required usd collateral in the contract
     function getRequiredCollateral() public view returns (uint) {
         return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + totalReward;
     }
 
+    // glp price
     function getGLPPrice(bool _maximum) public view returns (uint256) {
         return IGlpManager(glpManager).getPrice(_maximum);
     }
 
+    // staked glp amount
+    function getStakedGLP() public view returns (uint256) {
+        return IRewardTracker(RewardTracker).balanceOf(address(this));
+    }
+
+    // staked glp usd value
     function getStakedGLPUSDValue(bool _maximum) public view returns (uint) {
-        uint stakedGLP = IRewardTracker(RewardTracker).balanceOf(address(this));
-        return getGLPPrice(_maximum).mul(stakedGLP).div(1e48);
+        return getGLPPrice(_maximum).mul(getStakedGLP()).div(1e48);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -272,9 +280,11 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     function exit(uint _glpAmount) external {
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
         uint amount = withdrawRequest[msg.sender].amount;
-        IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, msg.sender);
+        IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, amount, address(this));
         _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
+        _totalSupply.withdrawable += amount;
+        _balances[msg.sender].withdrawable += amount;
         delete withdrawRequest[msg.sender];
     }
 
@@ -288,6 +298,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.wait -= amount;
             _balances[user].staked += amount;
             _totalSupply.staked += amount;    
+            totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch;  // reset timer   
             delete stakeRequest[user];
         }
@@ -338,12 +349,23 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         _totalSupply.staked += _amount;
     }
 
+/*
+    function stakeByGovETH(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
+        require(amount <= address(this).balance, "not enough funds");
+        IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
+    }
+*/
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyTreasury returns (uint256 amountOut) {
         require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
         amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         _totalSupply.staked -= amountOut;
     }
 
+/*
+    function handleRwards() external onlyOneBlock onlyTreasury {
+
+    }
+*/
     function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
