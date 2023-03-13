@@ -309,7 +309,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.wait -= amount;
             _balances[user].staked += amount;
             _totalSupply.staked += amount;    
-            members[user].epochTimerStart = _epoch;  // reset timer   
+            members[user].epochTimerStart = _epoch - 1;  // reset timer   
             delete stakeRequest[user];
         }
     }
@@ -326,7 +326,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
             _balances[user].withdrawable += amount;
             _totalSupply.withdrawable += amount;
             totalWithdrawRequest -= amount;
-            members[user].epochTimerStart = _epoch; // reset timer
+            members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];
         }
     }
@@ -344,7 +344,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         updateReward(member);
         uint256 reward = members[member].rewardEarned;
         if (reward > 0) {
-            members[member].epochTimerStart = epoch(); // reset timer
+            members[member].epochTimerStart = epoch() - 1; // reset timer
             members[member].rewardEarned = 0;
             emit RewardPaid(member, reward);
         }
@@ -358,24 +358,35 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         emit StakedByGov(epoch(), _amount, block.timestamp);
     }
 
-
     function stakeETHByGov(uint256 amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
         require(amount <= address(this).balance, "not enough funds");
         IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
         emit StakedETHByGov(epoch(), amount, block.timestamp);
     }
 
-
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) public onlyOneBlock onlyTreasury {
         IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
-/*
-    function handleRwards() external onlyOneBlock onlyTreasury {
-
+    function handleRwards(
+        bool _shouldClaimGmx,
+        bool _shouldStakeGmx,
+        bool _shouldClaimEsGmx,
+        bool _shouldStakeEsGmx,
+        bool _shouldStakeMultiplierPoints,
+        bool _shouldClaimWeth,
+        bool _shouldConvertWethToEth
+    ) external onlyTreasury {
+        IGLPRouter(glpRouter).handleRwards(
+            _shouldClaimGmx,
+            _shouldStakeGmx,
+            _shouldClaimEsGmx,
+            _shouldStakeEsGmx,
+            _shouldStakeMultiplierPoints,
+            _shouldClaimWeth,
+            _shouldConvertWethToEth);
     }
-*/
 
     function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");
@@ -392,8 +403,8 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         emit RewardAdded(msg.sender, amount);
     }
 
-    function treasuryWithdrawFunds(address token, uint256 amount, address to) external onlyTreasury {
-        IERC20(token).safeTransfer(to, amount);
+    function treasuryWithdrawFunds(address _token, uint256 amount, address to) external onlyTreasury {
+        IERC20(_token).safeTransfer(to, amount);
     }
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
