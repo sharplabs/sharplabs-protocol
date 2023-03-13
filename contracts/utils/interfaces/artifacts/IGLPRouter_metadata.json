@@ -42,6 +42,30 @@
 			{
 				"inputs": [
 					{
+						"internalType": "uint256",
+						"name": "_minUsdg",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_minGlp",
+						"type": "uint256"
+					}
+				],
+				"name": "mintAndStakeGlpETH",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "address",
 						"name": "_tokenOut",
 						"type": "address"
@@ -87,7 +111,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/utils/interfaces/IGLPRouter.sol": "IGLPRouter"
+			"sharplabs/contracts/utils/interfaces/IGLPRouter.sol": "IGLPRouter"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -101,12 +125,12 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/utils/interfaces/IGLPRouter.sol": {
-			"keccak256": "0x5736adf32da9af0963464ce22ca20789c770c9f7c9b66fd350175f3cfe161e11",
+		"sharplabs/contracts/utils/interfaces/IGLPRouter.sol": {
+			"keccak256": "0xe729864ba233048a138712798c057952bec0a0bde9d3f8636b9bd6c832ff69f7",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://3c81a338f3f540a4971f31ff72b588bb18908903555cd587aa5293d3b97afc81",
-				"dweb:/ipfs/QmcEr2W3tEqnQuYj6nHT7Y9viSHm8euXUjXCuNKGk2MUUy"
+				"bzz-raw://cb9e34967fce77ddbe463ffcf24e4db0ca481ff7b7c83c6acc45244bd5c0fde8",
+				"dweb:/ipfs/QmNotBUD8EjdnByEbocwNxfeoYxgWwintxhG5Hvabr6EPB"
 			]
 		}
 	},
