@@ -94,7 +94,7 @@ contract Treasury is Operator {
     }
 
     // withdraw pool funds(ERC20 tokens) to treasury
-    function withdrawPoolFunds(address _pool, address _token, uint _amount, address _to) external onlyGovernance {
+    function withdrawPoolFunds(address _pool, address _token, uint256 _amount, address _to) external onlyGovernance {
         if (_pool == riskOffPool && _token == USDC) {
             require(IGLPPool(_pool).getStakedGLPUSDValue() - IGLPPool(_pool).getRequiredCollateral() > _amount, "cannot withdraw pool funds");
         }
