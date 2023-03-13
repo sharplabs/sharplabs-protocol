@@ -309,7 +309,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.wait -= amount;
             _balances[user].staked += amount;
             _totalSupply.staked += amount;    
-            members[user].epochTimerStart = _epoch;  // reset timer   
+            members[user].epochTimerStart = _epoch - 1;  // reset timer   
             delete stakeRequest[user];
         }
     }
@@ -326,7 +326,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _balances[user].withdrawable += amount;
             _totalSupply.withdrawable += amount;
             totalWithdrawRequest -= amount;
-            members[user].epochTimerStart = _epoch; // reset timer
+            members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];
         }
     }
@@ -344,7 +344,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         updateReward(member);
         uint256 reward = members[member].rewardEarned;
         if (reward > 0) {
-            members[member].epochTimerStart = epoch(); // reset timer
+            members[member].epochTimerStart = epoch() - 1; // reset timer
             members[member].rewardEarned = 0;
             emit RewardPaid(member, reward);
         }
@@ -369,7 +369,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
-
     function handleRwards(
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
@@ -389,7 +388,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _shouldConvertWethToEth);
     }
 
-
     function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
@@ -405,8 +403,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         emit RewardAdded(msg.sender, amount);
     }
 
-    function treasuryWithdrawFunds(address token, uint256 amount, address to) external onlyTreasury {
-        IERC20(token).safeTransfer(to, amount);
+    function treasuryWithdrawFunds(address _token, uint256 amount, address to) external onlyTreasury {
+        IERC20(_token).safeTransfer(to, amount);
     }
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
