@@ -351,7 +351,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) public onlyOneBlock onlyTreasury {
-        require(_totalSupply.wait > 0, "Boardroom: Cannot stake 0");
         IERC20(_token).safeApprove(glpManager, 0);
         IERC20(_token).safeApprove(glpManager, _amount);
         IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
@@ -366,7 +365,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
 */
 
     function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) public onlyOneBlock onlyTreasury {
-        require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
         IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
