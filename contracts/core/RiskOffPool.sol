@@ -83,6 +83,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     event Staked(address indexed user, uint256 amount);
     event WithdrawRequest(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
+    event Redeemed(address indexed user, uint256 amount);
+    event StakedByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
+    event WithdrawnByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
 
@@ -220,7 +223,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     // required usd collateral in the contract
-    function getRequiredCollateral() public view returns (uint) {
+    function getRequiredCollateral() public view returns (uint256) {
         return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + totalReward;
     }
 
@@ -242,7 +245,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stake(uint256 _amount) public payable override onlyOneBlock {
-        require(_amount >= minimumRequest, "stake out of range");
+        require(_amount >= minimumRequest, "stake amount too low");
         require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
         require(msg.value >= gasthreshold, "need more gas to handle request");
         super.stake(_amount);
@@ -274,9 +277,11 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
-        token.safeTransfer(msg.sender, amount);        
+        token.safeTransfer(msg.sender, amount);     
+        emit Redeemed(msg.sender, amount);   
     }
 
+/*
     function exit(uint _glpAmount) external {
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
         uint amount = withdrawRequest[msg.sender].amount;
@@ -287,6 +292,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         _balances[msg.sender].withdrawable += amount;
         delete withdrawRequest[msg.sender];
     }
+*/
 
     function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyTreasury {
         uint256 _epoch = epoch();
@@ -298,7 +304,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.wait -= amount;
             _balances[user].staked += amount;
             _totalSupply.staked += amount;    
-            totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch;  // reset timer   
             delete stakeRequest[user];
         }
@@ -315,6 +320,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
             _totalSupply.staked -= amount;
             _balances[user].withdrawable += amount;
             _totalSupply.withdrawable += amount;
+            totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch; // reset timer
             delete withdrawRequest[user];
         }
@@ -347,6 +353,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
         _totalSupply.wait -= _amount;
         _totalSupply.staked += _amount;
+        emit StakedByGov(epoch(), _amount, block.timestamp);
     }
 
 /*
@@ -355,10 +362,12 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
     }
 */
-    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyOneBlock onlyTreasury returns (uint256 amountOut) {
+    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) public onlyOneBlock onlyTreasury {
         require(_totalSupply.staked > 0, "Boardroom: Cannot withdraw 0");
-        amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
-        _totalSupply.staked -= amountOut;
+        IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+        _totalSupply.staked -= _minOut;
+        _totalSupply.wait += _minOut;
+        emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
 /*
