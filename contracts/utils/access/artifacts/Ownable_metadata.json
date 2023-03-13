@@ -85,7 +85,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"brownie_projects/sharplabs/contracts/utils/access/Ownable.sol": "Ownable"
+			"sharplabs/contracts/utils/access/Ownable.sol": "Ownable"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -99,7 +99,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"brownie_projects/sharplabs/contracts/utils/Context.sol": {
+		"sharplabs/contracts/utils/Context.sol": {
 			"keccak256": "0x1cc748b2446aafb4c362edda845ca05b3b9994ebafc2c0ddbc894982c21305f0",
 			"license": "MIT",
 			"urls": [
@@ -107,7 +107,7 @@
 				"dweb:/ipfs/QmPZJrP5BSYeMe4ajmpbNS1p3nsfJbTbo7hBwHxJA133Uv"
 			]
 		},
-		"brownie_projects/sharplabs/contracts/utils/access/Ownable.sol": {
+		"sharplabs/contracts/utils/access/Ownable.sol": {
 			"keccak256": "0x43180eb9b0777a7f0b7ecfcae76c0e083c783a96119c9d8f1ffe3df9499968d3",
 			"license": "MIT",
 			"urls": [
