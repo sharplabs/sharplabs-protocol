@@ -5,3 +5,7 @@ __pycache__
 build/
 reports/
 artifacts/
+node_modules
+cache/
+typechain/
+yarn.lock
