@@ -148,9 +148,9 @@ contract Treasury is Operator {
             _shouldStakeGmx,
             _shouldClaimEsGmx,
             _shouldStakeEsGmx,
-           _shouldStakeMultiplierPoints,
-           _shouldClaimWeth,
-           _shouldConvertWethToEth);
+            _shouldStakeMultiplierPoints,
+            _shouldClaimWeth,
+            _shouldConvertWethToEth);
     }
 
     function updateEpoch() external onlyGovernance {
