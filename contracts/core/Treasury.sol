@@ -96,10 +96,10 @@ contract Treasury is Operator {
     // withdraw pool funds(ERC20 tokens) to treasury
     function withdrawPoolFunds(address _pool, address _token, uint256 _amount, address _to, bool _maximum) external onlyGovernance {
         if (_pool == riskOffPool && _token == USDC) {
-            require(IGLPPool(_pool).getStakedGLPUSDValue(_maximum) - IGLPPool(_pool).getRequiredCollateral() > _amount, "cannot withdraw pool funds");
+            require(IGLPPool(_pool).getRequiredCollateral() + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum), "cannot withdraw pool funds");
         }
         if (_pool == riskOnPool && _token == USDC) {
-            require(IGLPPool(_pool).getStakedGLPUSDValue(_maximum) - IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 > _amount , "cannot withdraw pool funds");
+            require(IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum), "cannot withdraw pool funds");
         }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
