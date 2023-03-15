@@ -70,7 +70,7 @@ contract ShareWrapper {
     }
 
     function withdraw(uint256 amount) public virtual {
-        require(_balances[msg.sender].withdrawable >= amount, "Boardroom: withdraw request greater than staked amount");
+        require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than staked amount");
         if (balance_reward(msg.sender) > 0) {
             uint _reward = _balances[msg.sender].reward;
             _balances[msg.sender].reward = 0;

@@ -63,7 +63,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     BoardroomSnapshot[] public boardroomHistory;
 
     mapping(address => StakeInfo) public stakeRequest;
-    mapping(address => WithdrawInfo)public withdrawRequest;
+    mapping(address => WithdrawInfo) public withdrawRequest;
 
     uint256 public withdrawLockupEpochs;
 
@@ -94,17 +94,17 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     /* ========== Modifiers =============== */
 
     modifier onlyTreasury() {
-        require(treasury == msg.sender, "Boardroom: caller is not the treasury");
+        require(treasury == msg.sender, "caller is not the treasury");
         _;
     }
 
     modifier memberExists() {
-        require(balance_withdraw(msg.sender) > 0, "Boardroom: The member does not exist");
+        require(balance_withdraw(msg.sender) > 0, "The member does not exist");
         _;
     }
 
     modifier notInitialized() {
-        require(!initialized, "Boardroom: already initialized");
+        require(!initialized, "already initialized");
         _;
     }
 
@@ -138,7 +138,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     /* ========== CONFIG ========== */
 
     function setLockUp(uint256 _withdrawLockupEpochs) external onlyOperator {
-        require(_withdrawLockupEpochs >= 0, "_withdrawLockupEpochs: out of range");
+        require(_withdrawLockupEpochs >= 0, "withdrawLockupEpochs: below zero");
         withdrawLockupEpochs = _withdrawLockupEpochs;
     }
 
@@ -148,11 +148,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function setFeeTo(address _feeTo) external onlyOperator {
+        require(_feeTo != address(0), "zero address");
         feeTo = _feeTo;
     }
 
     function setCapacity(uint256 _capacity) external onlyTreasury {
-        require(_capacity >= 0, "capacity: out of range");
+        require(_capacity >= 0, "capacity: below 0");
         capacity = _capacity;
     }
 
@@ -173,10 +174,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function setGasThreshold(uint256 _gasthreshold) external onlyOperator {
+        require(_gasthreshold >= 0, "gasthreshold below zero");
         gasthreshold = _gasthreshold;
     }    
 
     function setMinimumRequest(uint256 _minimumRequest) external onlyOperator {
+        require(_minimumRequest >= 0, "minimumRequest below zero");
         minimumRequest = _minimumRequest;
     }   
 
