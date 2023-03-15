@@ -50,7 +50,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
 
     // reward
-    uint256 public totalReward;
+    uint256 public currentEpochReward;
     uint256 public totalWithdrawRequest;
 
     // governance
@@ -179,6 +179,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     function setMinimumRequest(uint256 _minimumRequest) external onlyOperator {
         minimumRequest = _minimumRequest;
     }   
+
+    function resetCurrentEpochReward() external onlyTreasury {
+        currentEpochReward = 0;
+    }
+
     /* ========== VIEW FUNCTIONS ========== */
 
     // =========== Snapshot getters
@@ -226,7 +231,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
 
     // required usd collateral in the contract
     function getRequiredCollateral() public view returns (uint256) {
-        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + totalReward;
+        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + _totalSupply.reward;
     }
 
     // glp price
@@ -320,7 +325,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
             address user = _address[i];
             uint amount = withdrawRequest[user].amount;
             uint reward = claimReward(user);
-            totalReward -= reward;
+            currentEpochReward += reward;
             _balances[user].staked -= amount;
             _totalSupply.staked -= amount;
             _balances[user].withdrawable += amount;
@@ -346,6 +351,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         if (reward > 0) {
             members[member].epochTimerStart = epoch() - 1; // reset timer
             members[member].rewardEarned = 0;
+            _balances[msg.sender].withdrawable += reward;
             emit RewardPaid(member, reward);
         }
         return reward;
@@ -399,7 +405,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
 
-        totalReward += amount;
+        _totalSupply.reward += amount;
         emit RewardAdded(msg.sender, amount);
     }
 
