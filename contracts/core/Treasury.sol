@@ -28,6 +28,10 @@ contract Treasury is Operator {
     // flags
     bool public initialized = false;
 
+    event Initialized(address indexed executor, uint256 at);
+    event EpochUpdated(uint256 indexed atEpoch, uint256 timestamp);
+    event CapacityUpdated(uint256 indexed atEpoch, uint256 _riskOffPoolCapacity, uint256 _riskOnPoolCapacity);
+
     modifier onlyGovernance() {
         require(governance == msg.sender, "Boardroom: caller is not the governance");
         _;
@@ -60,6 +64,7 @@ contract Treasury is Operator {
         riskOnPoolRatio = _riskOnPoolRatio;
         startTime = _startTime;
         initialized = true;
+        emit Initialized(msg.sender, block.number);
     }
 
     function buyGLP(
@@ -125,6 +130,11 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
+    function withdrawETH(uint256 amount) external onlyGovernance {
+        require(amount <= address(this).balance, "insufficient funds");
+        payable(msg.sender).transfer(amount);
+    }
+
     function handleStakeRequest(address _pool, address[] memory _address) external onlyGovernance {
         IGLPPool(_pool).handleStakeRequest(_address);
     }
@@ -158,10 +168,12 @@ contract Treasury is Operator {
         epoch += 1;
         IGLPPool(riskOffPool).resetCurrentEpochReward();
         IGLPPool(riskOnPool).resetCurrentEpochReward();
+        emit EpochUpdated(epoch, block.timestamp);
     }
 
     function updateCapacity(uint _riskOffPoolCapacity, uint _riskOnPoolCapacity) external onlyGovernance {
         IGLPPool(riskOffPool).setCapacity(_riskOffPoolCapacity);
         IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
+        emit CapacityUpdated(epoch, _riskOffPoolCapacity, _riskOnPoolCapacity);
     } 
 }
