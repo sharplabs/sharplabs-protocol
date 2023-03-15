@@ -111,7 +111,7 @@ contract Treasury is Operator {
     }
 
     // allocate reward at every epoch
-    function allocateReward(address _riskOffPool, uint256 _amount) public onlyGovernance {
+    function allocateReward(address _riskOffPool, uint256 _amount) external onlyGovernance {
         IGLPPool(_riskOffPool).allocateReward(_amount);
     }
 
@@ -125,11 +125,11 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
-    function handleStakeRequest(address _pool, address[] memory _address) public onlyGovernance {
+    function handleStakeRequest(address _pool, address[] memory _address) external onlyGovernance {
         IGLPPool(_pool).handleStakeRequest(_address);
     }
 
-    function handleWithdrawRequest(address _pool, address[] memory _address) public onlyGovernance {
+    function handleWithdrawRequest(address _pool, address[] memory _address) external onlyGovernance {
         IGLPPool(_pool).handleWithdrawRequest(_address);
     }
     
@@ -156,10 +156,12 @@ contract Treasury is Operator {
     function updateEpoch() external onlyGovernance {
         require(block.timestamp >= nextEpochPoint(), "Treasury: not opened yet");
         epoch += 1;
+        IGLPPool(riskOffPool).resetCurrentEpochReward();
+        IGLPPool(riskOnPool).resetCurrentEpochReward();
     }
 
-    function updateCapacity(uint riskOffPoolCapacity, uint riskOnPoolCapacity) external onlyGovernance {
-        IGLPPool(riskOffPool).setCapacity(riskOffPoolCapacity);
-        IGLPPool(riskOnPool).setCapacity(riskOnPoolCapacity);
+    function updateCapacity(uint _riskOffPoolCapacity, uint _riskOnPoolCapacity) external onlyGovernance {
+        IGLPPool(riskOffPool).setCapacity(_riskOffPoolCapacity);
+        IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
     } 
 }

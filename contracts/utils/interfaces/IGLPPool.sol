@@ -38,6 +38,8 @@ interface IGLPPool {
 
     function setCapacity(uint256 _amount) external;
 
+    function resetCurrentEpochReward() external;
+
     function treasuryWithdrawFunds(address token, uint256 amount, address to) external;
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external;
