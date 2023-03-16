@@ -42,6 +42,8 @@ contract Treasury is Operator {
         _;
     }
 
+    receive() payable external {}
+    
     // epoch
     function nextEpochPoint() public view returns (uint256) {
         return startTime.add(epoch.mul(period));
