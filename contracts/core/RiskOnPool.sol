@@ -73,9 +73,9 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     bool public initialized = false;
 
     address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
+    address public rewardRouter = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
     address public glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
     address public RewardTracker = 0x1aDDD80E6039594eE970E5872D247bf0414C8903;
-
 
     /* ========== EVENTS ========== */
 
@@ -157,8 +157,9 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         capacity = _capacity;
     }
 
-    function setGlpRouter(address _glpRouter) external onlyOperator {
+    function setRouter(address _glpRouter, address _rewardRouter) external onlyOperator {
         glpRouter = _glpRouter;
+        rewardRouter = _rewardRouter;
     }
 
     function setGlpManager(address _glpManager) external onlyOperator {
@@ -390,7 +391,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external onlyTreasury {
-        IGLPRouter(glpRouter).handleRwards(
+        IGLPRouter(rewardRouter).handleRwards(
             _shouldClaimGmx,
             _shouldStakeGmx,
             _shouldClaimEsGmx,
