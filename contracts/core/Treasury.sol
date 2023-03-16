@@ -51,6 +51,8 @@ contract Treasury is Operator {
         return initialized;
     }
 
+    receive () payable external {}
+
     function initialize(
         address _governance, 
         address _riskOffPool, 
@@ -98,7 +100,7 @@ contract Treasury is Operator {
         payable(_pool).transfer(_amount);
     }
 
-    // withdraw pool funds(ERC20 tokens) to treasury
+    // withdraw pool funds(ERC20 tokens) to specified address
     function withdrawPoolFunds(address _pool, address _token, uint256 _amount, address _to, bool _maximum) external onlyGovernance {
         if (_pool == riskOffPool && _token == USDC) {
             uint USDCAmount = IERC20(USDC).balanceOf(_pool);
@@ -111,7 +113,7 @@ contract Treasury is Operator {
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
 
-    // withdraw pool funds(ETH) to treasury
+    // withdraw pool funds(ETH) to specified address
     function withdrawPoolFundsETH(address _pool, uint _amount, address _to) external onlyGovernance {
         require(_amount <= _pool.balance, "insufficient funds");
         IGLPPool(_pool).treasuryWithdrawFundsETH(_amount, _to);
