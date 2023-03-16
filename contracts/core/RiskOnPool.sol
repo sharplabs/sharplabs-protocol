@@ -312,6 +312,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = stakeRequest[user].amount;
+            require(stakeRequest[user].requestEpoch == _epoch - 1, "wrong epoch"); // check latest epoch
             updateReward(user);
             _balances[user].wait -= amount;
             _balances[user].staked += amount;
@@ -327,13 +328,13 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = withdrawRequest[user].amount;
+            require(withdrawRequest[user].requestEpoch == _epoch - 1, "wrong epoch"); // check latest epoch
             uint reward = claimReward(user);
             _balances[user].staked -= amount;
             _balances[user].withdrawable += amount;
             _balances[user].reward += reward;
             _totalSupply.staked -= amount;
             _totalSupply.withdrawable += amount;
-            _totalSupply.reward += reward;
             currentEpochReward += reward;
             totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch - 1; // reset timer
@@ -356,7 +357,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         if (reward > 0) {
             members[member].epochTimerStart = epoch() - 1; // reset timer
             members[member].rewardEarned = 0;
-            _balances[msg.sender].withdrawable += reward;
+            _balances[msg.sender].reward += reward;
             emit RewardPaid(member, reward);
         }
         return reward;
