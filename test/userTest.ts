@@ -1,9 +1,10 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { RiskOffPool, RiskOffPool__factory, ERC20, Treasury, Treasury__factory} from "../typechain";
+import { RiskOffPool, RiskOffPool__factory, RiskOnPool, RiskOnPool__factory, ERC20, Treasury, Treasury__factory } from "../typechain";
 import { ERC20Token } from "./utils/tokens";
-import {getBigNumber, getERC20ContractFromAddress, impersonateFundErc20} from "./utils/erc20Utils"
+import { getBigNumber, getERC20ContractFromAddress, impersonateFundErc20 } from "./utils/erc20Utils"
 
 export const deployContractFromName = async (
     contractName: string,
@@ -19,6 +20,7 @@ export const deployContractFromName = async (
 
 describe("sharplabs test", () => {
     let RiskOffPool: RiskOffPool;
+    let RiskOnPool: RiskOnPool;
     let Treasury: Treasury;
     let owner: SignerWithAddress;
     let _feeTo: SignerWithAddress;
@@ -28,29 +30,37 @@ describe("sharplabs test", () => {
     let _token: ERC20;
     let fsGLP: ERC20;
     let _fee = 300;
-    let _gasthreshold = 1;
-    let _minimumRequset = 10;
-    let _riskOnPoolRatio = 1
+    let _gasthreshold = getBigNumber(0.0001);
+    let _minimumRequset = getBigNumber(1, 6);
+    let _riskOnPoolRatio = 10
     let _startTime = 1600000
-    let USDC_WHALE = '0xe8c19db00287e3536075114b2576c70773e039bd'
+    let USDC_WHALE = '0x62383739D68Dd0F844103Db8dFb05a7EdED5BBE6'
     let fsGLP_add = '0x1aDDD80E6039594eE970E5872D247bf0414C8903'
 
     before(async () => {
-        // console.info(contract);
+        [owner, _feeTo, _governance, ...addrs] = await ethers.getSigners();
+
         USDC = await getERC20ContractFromAddress(ERC20Token.USDC.address);
         _token = USDC;
         fsGLP = await getERC20ContractFromAddress(fsGLP_add);
-        [owner, _feeTo, _governance, ...addrs] = await ethers.getSigners();
+
         RiskOffPool = await deployContractFromName("RiskOffPool", RiskOffPool__factory);
         await RiskOffPool.deployed();
+        RiskOnPool = await deployContractFromName("RiskOnPool", RiskOnPool__factory);
+        await RiskOnPool.deployed()
         Treasury = await deployContractFromName("Treasury", Treasury__factory);
         await Treasury.deployed();
-        await Treasury.initialize(_governance.address, RiskOffPool.address, RiskOffPool.address, _riskOnPoolRatio, _startTime)
+
+        await Treasury.initialize(_governance.address, RiskOffPool.address, RiskOnPool.address, _riskOnPoolRatio, _startTime)
 
         await RiskOffPool.initialize(_token.address, _fee, _feeTo.address, _gasthreshold, _minimumRequset, Treasury.address)
         await RiskOffPool.connect(owner).setLockUp(0)
+
+        await RiskOnPool.initialize(_token.address, _fee, _feeTo.address, _gasthreshold, _minimumRequset, Treasury.address)
+        await RiskOnPool.connect(owner).setLockUp(0)
+
         await Treasury.connect(_governance).updateCapacity(getBigNumber(1000, 6), getBigNumber(1000, 6));
-        // Add 500 USDC to the owner address
+
         await impersonateFundErc20(
             USDC,
             USDC_WHALE,
@@ -78,6 +88,7 @@ describe("sharplabs test", () => {
 
     });
 
+
     describe("operate", () => {
 
         it("user stake", async () => {
@@ -87,16 +98,18 @@ describe("sharplabs test", () => {
             let total_supply_staked = await RiskOffPool.total_supply_staked()
             let total_supply_wait = await RiskOffPool.total_supply_wait()
             let requests = await RiskOffPool.stakeRequest(owner.address)
+            let eth_balance = await ethers.provider.getBalance(RiskOffPool.address)
             console.info("user_wallet_balance", user_wallet_balance)
             console.info("user_balance_wait", user_balance_wait)
             console.info("total_supply_staked", total_supply_staked)
             console.info("total_supply_wait", total_supply_wait)
             console.info("stake queue", requests)
+            console.info("fee to's eth_balance", eth_balance)
 
             console.info('user approve...')
             await USDC.approve(RiskOffPool.address, ethers.constants.MaxInt256)
             console.info('user stake...')
-            let out = await RiskOffPool.stake(getBigNumber(100, 6), {value:100})
+            let out = await RiskOffPool.stake(getBigNumber(100, 6), { value: getBigNumber(1) })
             // console.info(out)
             console.info('user stake after info:')
             user_wallet_balance = await USDC.balanceOf(owner.address)
@@ -104,55 +117,93 @@ describe("sharplabs test", () => {
             total_supply_staked = await RiskOffPool.total_supply_staked()
             total_supply_wait = await RiskOffPool.total_supply_wait()
             requests = await RiskOffPool.stakeRequest(owner.address)
+            eth_balance = await ethers.provider.getBalance(RiskOffPool.address)
             console.info("user_wallet_balance", user_wallet_balance)
             console.info("user_balance_wait", user_balance_wait)
             console.info("total_supply_staked", total_supply_staked)
             console.info("total_supply_wait", total_supply_wait)
             console.info("stake queue", requests)
+            console.info("fee to's eth_balance", eth_balance)
 
             console.info('user stake...')
-            await RiskOffPool.stake(getBigNumber(100, 6), {value:100})
-            
+            await RiskOffPool.stake(getBigNumber(100, 6), { value: getBigNumber(0.01) })
+
             console.info('user stake after info:')
             user_wallet_balance = await USDC.balanceOf(owner.address)
             user_balance_wait = await RiskOffPool.balance_wait(owner.address)
             requests = await RiskOffPool.stakeRequest(owner.address)
             total_supply_staked = await RiskOffPool.total_supply_staked()
             total_supply_wait = await RiskOffPool.total_supply_wait()
+            eth_balance = await ethers.provider.getBalance(RiskOffPool.address)
             console.info("user_wallet_balance", user_wallet_balance)
             console.info("user_balance_wait", user_balance_wait)
             console.info("total_supply_staked", total_supply_staked)
             console.info("total_supply_wait", total_supply_wait)
             console.info("stake queue", requests)
+            console.info("fee to's eth_balance", eth_balance)
+        })
+        // too slow, if you want to test it, switch to true
+        if (false) {
+            it("gov withdrawPoolFunds", async () => {
+                // transfer 100 usdc to pool
+                await impersonateFundErc20(
+                    USDC,
+                    USDC_WHALE,
+                    RiskOffPool.address,
+                    "100.0",
+                    6
+                );
+
+                let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
+                let onwer_usdc_balance = await USDC.balanceOf(owner.address)
+                let withdrawAmount = getBigNumber(10, 6)
+                // console.info("contract_usdc_balance", contract_usdc_balance)
+                // console.info("onwer_usdc_balance", onwer_usdc_balance)
+                // console.info("gov withdrawPoolFunds...")
+                // console.info(await RiskOffPool.getRequiredCollateral())
+                // console.info(await RiskOffPool.getStakedGLPUSDValue(false))
+                let out = await Treasury.connect(_governance).withdrawPoolFunds(RiskOffPool.address, USDC.address, withdrawAmount, owner.address, false)
+
+                expect(contract_usdc_balance.sub(withdrawAmount)).to.equal(await USDC.balanceOf(RiskOffPool.address))
+                expect(onwer_usdc_balance.add(withdrawAmount)).to.equal(await USDC.balanceOf(owner.address))
+            })
+        }
+
+        it("gov withdrawPoolFundsETH", async () => {
+            const transactionHash = await owner.sendTransaction({
+                to: RiskOffPool.address,
+                value: getBigNumber(1), // Sends exactly 1.0 ether
+                gasLimit: 30000000
+              });
+
+            let contract_eth_balance = await ethers.provider.getBalance(RiskOffPool.address)
+            let onwer_eth_balance = await ethers.provider.getBalance(owner.address)
+            let withdrawAmount = getBigNumber(10, 6)
+            let out = await Treasury.connect(_governance).withdrawPoolFundsETH(RiskOffPool.address, withdrawAmount, owner.address)
+
+            expect(contract_eth_balance.sub(withdrawAmount)).to.equal(await ethers.provider.getBalance(RiskOffPool.address))
+            expect(onwer_eth_balance.add(withdrawAmount)).to.equal(await ethers.provider.getBalance(owner.address))
+
+            await Treasury.connect(_governance).withdrawPoolFundsETH(RiskOffPool.address, 0, owner.address)
+            // await Treasury.connect(_governance).withdrawPoolFundsETH(RiskOffPool.address, getBigNumber(1111110), owner.address)
         })
 
-        it("gov withdrawPoolFunds", async () => {
-            let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            let onwer_usdc_balance = await USDC.balanceOf(owner.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("onwer_usdc_balance", onwer_usdc_balance)
-            console.info("gov withdrawPoolFunds...")
-            let out = await Treasury.connect(_governance).withdrawPoolFunds(RiskOffPool.address, USDC.address, getBigNumber(50, 6), owner.address, false)
-
-            contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            onwer_usdc_balance = await USDC.balanceOf(owner.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("onwer_usdc_balance", onwer_usdc_balance)
-        })
 
         it("gov withdraw", async () => {
             let treasury_usdc_balance = await USDC.balanceOf(Treasury.address)
             let _governance_usdc_balance = await USDC.balanceOf(_governance.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
-            console.info("gov withdraw...")
-            let out = await Treasury.connect(_governance).withdraw(USDC.address, getBigNumber(50, 6))
+            let withdrawAmount = getBigNumber(50, 6)
+            // console.info("treasury_usdc_balance", treasury_usdc_balance)
+            // console.info("_governance_usdc_balance", _governance_usdc_balance)
+            // console.info("gov withdraw...")
+            let out = await Treasury.connect(_governance).withdraw(USDC.address, withdrawAmount)
             // console.info(out)
 
-            treasury_usdc_balance = await USDC.balanceOf(Treasury.address)
-            _governance_usdc_balance = await USDC.balanceOf(_governance.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
+            expect(treasury_usdc_balance.sub(withdrawAmount)).to.equal(await USDC.balanceOf(Treasury.address))
+            expect(_governance_usdc_balance.add(withdrawAmount)).to.equal( await USDC.balanceOf(_governance.address))
+
+            await Treasury.connect(_governance).withdraw(USDC.address, 0)
+            // await Treasury.connect(_governance).withdraw(USDC.address, getBigNumber(9990))
         })
 
 
@@ -160,85 +211,110 @@ describe("sharplabs test", () => {
             let treasury_usdc_balance = await USDC.balanceOf(Treasury.address)
             let _governance_usdc_balance = await USDC.balanceOf(_governance.address)
             let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("gov sendPoolFunds...")
-            let out = await Treasury.connect(_governance).sendPoolFunds(RiskOffPool.address, USDC.address, getBigNumber(100, 6))
+            let depositAmount = getBigNumber(100, 6)
+            // console.info("treasury_usdc_balance", treasury_usdc_balance)
+            // console.info("_governance_usdc_balance", _governance_usdc_balance)
+            // console.info("contract_usdc_balance", contract_usdc_balance)
+            // console.info("gov sendPoolFunds...")
+            
+            let out = await Treasury.connect(_governance).sendPoolFunds(RiskOffPool.address, USDC.address, depositAmount)
 
-            contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            _governance_usdc_balance = await USDC.balanceOf(_governance.address)
-            contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
-            console.info("contract_usdc_balance", contract_usdc_balance)
+            expect(contract_usdc_balance.add(depositAmount)).to.equal(await USDC.balanceOf(RiskOffPool.address))
+            expect(treasury_usdc_balance.sub(depositAmount)).to.equal(await USDC.balanceOf(Treasury.address))
+            expect(_governance_usdc_balance).to.equal(await USDC.balanceOf(_governance.address))
+
+            await Treasury.connect(_governance).sendPoolFunds(RiskOffPool.address, USDC.address, 0)
+            // await Treasury.connect(_governance).sendPoolFunds(RiskOffPool.address, USDC.address, getBigNumber(9999))
+        })
+
+        it("gov sendPoolFundsEth", async () => {
+            const transactionHash = await owner.sendTransaction({
+                to: Treasury.address,
+                value: getBigNumber(1), // Sends exactly 1.0 ether
+                gasLimit: 30000000
+              });
+
+            let treasury_eth_balance = await ethers.provider.getBalance(Treasury.address)
+            let _governance_eth_balance = await ethers.provider.getBalance(_governance.address)
+            let contract_eth_balance = await ethers.provider.getBalance(RiskOffPool.address)
+            let depositAmount = getBigNumber(100, 6)
+            
+            let out = await Treasury.connect(_governance).sendPoolFundsEth(RiskOffPool.address, depositAmount)
+
+            expect(contract_eth_balance.add(depositAmount)).to.equal(await ethers.provider.getBalance(RiskOffPool.address))
+            expect(treasury_eth_balance.sub(depositAmount)).to.equal(await ethers.provider.getBalance(Treasury.address))
+            // _governance would use the gas
+            // expect(_governance_eth_balance).to.equal(await ethers.provider.getBalance(_governance.address))
+
+            await Treasury.connect(_governance).sendPoolFundsEth(RiskOffPool.address, 0)
+            // await Treasury.connect(_governance).sendPoolFundsEth(RiskOffPool.address, getBigNumber(9999))
         })
 
         it("gov deposit", async () => {
             let _governance_usdc_balance = await USDC.balanceOf(_governance.address)
             let treasury_usdc_balance = await USDC.balanceOf(Treasury.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
-            console.info("gov deposit...")
+            let depositAmount = getBigNumber(1, 6)
+            // console.info("treasury_usdc_balance", treasury_usdc_balance)
+            // console.info("_governance_usdc_balance", _governance_usdc_balance)
+            // console.info("gov deposit...")
             await USDC.connect(_governance).approve(Treasury.address, ethers.constants.MaxInt256)
-            let out = await Treasury.connect(_governance).deposit(USDC.address, getBigNumber(1, 6))
+            let out = await Treasury.connect(_governance).deposit(USDC.address, depositAmount)
 
-            treasury_usdc_balance = await USDC.balanceOf(Treasury.address)
-            _governance_usdc_balance = await USDC.balanceOf(_governance.address)
-            console.info("treasury_usdc_balance", treasury_usdc_balance)
-            console.info("_governance_usdc_balance", _governance_usdc_balance)
+            expect(_governance_usdc_balance.sub(depositAmount)).to.equal(await USDC.balanceOf(_governance.address))
+            expect(treasury_usdc_balance.add(depositAmount)).to.equal(await USDC.balanceOf(Treasury.address))
         })
 
+        // too slow, if you want to test it, change it to true
+        if (false) {
+            it("gov buy glp", async () => {
+                console.info('before gov buy glp:')
+                let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
+                let contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
+                console.info("contract_usdc_balance", contract_usdc_balance)
+                console.info("contract_glp_balance", contract_glp_balance)
+                console.info('gov buy glp ...')
+                let out = await Treasury.connect(_governance).buyGLP(RiskOffPool.address, USDC.address, getBigNumber(100, 6), getBigNumber(50, 6), getBigNumber(50, 6))
+                // console.info("buy glp", out)
+                console.info('after gov buy glp:')
+                contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
+                contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
+                console.info("contract_usdc_balance", contract_usdc_balance)
+                console.info("contract_glp_balance", contract_glp_balance)
+            })
+
+            it("gov sell glp", async () => {
+                await ethers.provider.send("evm_increaseTime", [360000])
+                await ethers.provider.send("evm_mine", [])
+                console.info('before gov sell glp:')
+                let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
+                let contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
+                console.info("contract_usdc_balance", contract_usdc_balance)
+                console.info("contract_glp_balance", contract_glp_balance)
+                console.info('gov sell glp ...')
+                let out = await Treasury.connect(_governance).sellGLP(RiskOffPool.address, USDC.address, contract_glp_balance, getBigNumber(10, 6), _governance.address)
+                // console.info("sell glp", out)
+                console.info('after gov sell glp:')
+                contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
+                contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
+                console.info("contract_usdc_balance", contract_usdc_balance)
+                console.info("contract_glp_balance", contract_glp_balance)
+            })
+        }
 
 
-        it("gov buy glp", async () => {
-            console.info('before gov buy glp:')
-            let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            let contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("contract_glp_balance", contract_glp_balance)
-            console.info('gov buy glp ...')
-            let out = await Treasury.connect(_governance).buyGLP(RiskOffPool.address, USDC.address, getBigNumber(100, 6), getBigNumber(50, 6), getBigNumber(50, 6))
-            // console.info("buy glp", out)
-            console.info('after gov buy glp:')
-            contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("contract_glp_balance", contract_glp_balance)
-        })
-
-        it("gov sell glp", async () => {
-            await ethers.provider.send("evm_increaseTime", [360000])
-            await ethers.provider.send("evm_mine", [])
-            console.info('before gov sell glp:')
-            let contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            let contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("contract_glp_balance", contract_glp_balance)
-            console.info('gov sell glp ...')
-            let out = await Treasury.connect(_governance).sellGLP(RiskOffPool.address, USDC.address, contract_glp_balance, getBigNumber(10, 6), _governance.address)
-            // console.info("sell glp", out)
-            console.info('after gov sell glp:')
-            contract_usdc_balance = await USDC.balanceOf(RiskOffPool.address)
-            contract_glp_balance = await fsGLP.balanceOf(RiskOffPool.address)
-            console.info("contract_usdc_balance", contract_usdc_balance)
-            console.info("contract_glp_balance", contract_glp_balance)
-        })
-
-        it ("updateEpoch", async () => {
-            console.info('before updateEpoch')
+        it("updateEpoch", async () => {
             let epoch = await Treasury.epoch()
-            console.info('epoch', epoch)
+            // console.info('before updateEpoch')
+            // console.info('epoch', epoch)
 
-            console.info('updateEpoch ...')
+            // console.info('updateEpoch ...')
             await Treasury.connect(_governance).updateEpoch()
 
-            epoch = await Treasury.epoch()
-            console.info('epoch', epoch)
+            expect(epoch.add(1)).to.equal(await Treasury.epoch())
         })
 
 
-        it ("handleStakeRequest", async () => {
+        it("handleStakeRequest", async () => {
             console.info('handleStakeRequest ...')
             let out = await Treasury.connect(_governance).handleStakeRequest(RiskOffPool.address, [owner.address])
             // console.info("handle stake", out)
@@ -251,35 +327,19 @@ describe("sharplabs test", () => {
             console.info("stake queue", requests)
         })
 
-        // it("user redeem", async () => {
-        //     let user_wallet_balance = await USDC.balanceOf(owner.address)
-        //     let user_balance_wait = await RiskOffPool.balance_wait(owner.address)
-        //     let requests = await RiskOffPool.stakeRequest(owner.address)
-        //     console.info("user_wallet_balance", user_wallet_balance)
-        //     console.info("user_balance_wait", user_balance_wait)
-        //     console.info("stake queue", requests)
-
-        //     let out = await RiskOffPool.redeem()
-        //     // console.info(out)
-
-        //     user_wallet_balance = await USDC.balanceOf(owner.address)
-        //     user_balance_wait = await RiskOffPool.balance_wait(owner.address)
-        //     requests = await RiskOffPool.stakeRequest(owner.address)
-        //     console.info("user_wallet_balance", user_wallet_balance)
-        //     console.info("user_balance_wait", user_balance_wait)
-        //     console.info("stake queue", requests)
-        // })
-
         it("user withdraw request", async () => {
-            console.info("before user withdraw request info:")
             let requests = await RiskOffPool.withdrawRequest(owner.address)
-            console.info("requests", requests)
-            console.info("user submit withdraw request ...")
-            let out = await RiskOffPool.withdraw_request(getBigNumber(50, 6), {value:100})
-            // console.info(out)
-            console.info("after user withdraw request info:")
-            requests = await RiskOffPool.withdrawRequest(owner.address )
-            console.info("requests", requests)
+            let withdrawAmount = getBigNumber(60, 6)
+            let out = await RiskOffPool.withdraw_request(withdrawAmount, { value: getBigNumber(0.01) })
+            expect((await RiskOffPool.withdrawRequest(owner.address)).amount).to.equal(requests.amount.add(withdrawAmount))
+        })
+
+        it("updateEpoch", async () => {
+            let epoch = await Treasury.epoch()
+
+            await Treasury.connect(_governance).updateEpoch()
+
+            expect(epoch.add(1)).to.equal(await Treasury.epoch())
         })
 
         it("handle withdraw request", async () => {
@@ -293,7 +353,7 @@ describe("sharplabs test", () => {
             // console.info(out)
             console.info("after handle withdraw request:")
             user_wallet_balance = await USDC.balanceOf(owner.address)
-            requests = await RiskOffPool.withdrawRequest(owner.address )
+            requests = await RiskOffPool.withdrawRequest(owner.address)
             console.info("user_wallet_balance", user_wallet_balance)
             console.info("requests", requests)
         })
@@ -313,19 +373,21 @@ describe("sharplabs test", () => {
 
 
         it("user withdraw", async () => {
-            console.info("before user withdraw:")
             let user_wallet_balance = await USDC.balanceOf(owner.address)
             let user_balance_withdraw = await RiskOffPool.balance_withdraw(owner.address)
-            console.info("user_wallet_balance", user_wallet_balance)
-            console.info("user_balance_withdraw", user_balance_withdraw)
-            console.info("user withdraw ...")
-            let out = await RiskOffPool.withdraw(getBigNumber(50, 6))
+            let fee_balance = await USDC.balanceOf(_feeTo.address)
+            let withdrawAmount = getBigNumber(40, 6)
+            // console.info("before user withdraw:")
+            // console.info("user_wallet_balance", user_wallet_balance)
+            // console.info("user_balance_withdraw", user_balance_withdraw)
+            // console.info("fee_balance", fee_balance)
+            
+            let out = await RiskOffPool.withdraw(withdrawAmount)
             // console.info(out)
-            console.info("after user withdraw:")
-            user_wallet_balance = await USDC.balanceOf(owner.address)
-            user_balance_withdraw = await RiskOffPool.balance_withdraw(owner.address)
-            console.info("user_wallet_balance", user_wallet_balance)
-            console.info("user_balance_withdraw", user_balance_withdraw)
+            
+            expect(user_wallet_balance.add(withdrawAmount.mul(10000-_fee).div(10000))).to.equal(await USDC.balanceOf(owner.address))
+            expect(user_balance_withdraw.sub(withdrawAmount)).to.equal(await RiskOffPool.balance_withdraw(owner.address))
+            expect(fee_balance.add(withdrawAmount.mul(_fee).div(10000))).to.equal(await USDC.balanceOf(_feeTo.address))
         })
     });
 
