@@ -107,13 +107,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         _;
     }
 
-<<<<<<< HEAD
-    receive () payable external {}
-
-=======
     receive() payable external {}
     
->>>>>>> 115fc546202cba8997f87548a00a04524c4203a7
     /* ========== GOVERNANCE ========== */
 
     function initialize (
