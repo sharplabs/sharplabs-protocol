@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 
 import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
+import "../utils/token/ISharplabs.sol";
 
 import "../utils/security/ContractGuard.sol";
 import "../utils/access/Operator.sol";
@@ -47,13 +48,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
 
     /* ========== STATE VARIABLES ========== */
 
-    address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
-
     // reward
     uint256 public currentEpochReward;
     uint256 public totalWithdrawRequest;
 
-    // governance
+    address public token;
     address public treasury;
 
     uint256 gasthreshold;
@@ -113,7 +112,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     /* ========== GOVERNANCE ========== */
 
     function initialize (
-        IERC20 _token,
+        address _token,
         uint256 _fee,
         address _feeTo,
         uint256 _gasthreshold,
@@ -265,6 +264,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         stakeRequest[msg.sender].amount += _amount;
         stakeRequest[msg.sender].requestTimestamp = block.timestamp;
         stakeRequest[msg.sender].requestEpoch = epoch();
+        ISharplabs(token).mint(msg.sender, _amount);
         emit Staked(msg.sender, _amount);
     }
 
@@ -283,6 +283,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
     function withdraw(uint256 amount) public override onlyOneBlock memberExists {
         require(amount != 0, "cannot withdraw 0");
         super.withdraw(amount);
+        ISharplabs(token).burn(msg.sender, amount);   
         emit Withdrawn(msg.sender, amount);
     }
 
@@ -290,10 +291,10 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
-        token.safeTransfer(msg.sender, amount);     
+        IERC20(USDC).safeTransfer(msg.sender, amount);  
+        ISharplabs(token).burn(msg.sender, amount);   
         emit Redeemed(msg.sender, amount);   
     }
-
 
     function exit() external {
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * 5 <= block.timestamp, "cannot exit");
@@ -308,7 +309,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
         delete withdrawRequest[msg.sender];
         emit Exit(msg.sender, amount);
     }
-
 
     function handleStakeRequest(address[] memory _address) public onlyOneBlock onlyTreasury {
         uint256 _epoch = epoch();
