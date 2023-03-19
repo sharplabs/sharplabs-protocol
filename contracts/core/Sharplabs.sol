@@ -18,9 +18,9 @@ contract Sharplabs is Operator {
     event Mint(address indexed from, address indexed to, uint256 value);
     event Burn(address indexed from, address indexed to, uint256 value);
 
-    constructor(string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
+    constructor() {
+        _name = "Sharplabs";
+        _symbol = "Sharplabs";
     }
 
     function name() public view returns (string memory) {

@@ -53,8 +53,6 @@ contract Treasury is Operator {
         return initialized;
     }
 
-    receive () payable external {}
-
     function initialize(
         address _governance, 
         address _riskOffPool, 
