@@ -53,6 +53,28 @@ contract Treasury is Operator {
         return initialized;
     }
 
+    /* ========== CONFIG ========== */
+
+    function setPeriod(uint _period) external onlyOperator {
+        require(_period > 0, "zero period");
+        period = _period;
+    }
+
+    function setPool(address _riskOffPool, address _riskOnPool) external onlyOperator {
+        riskOffPool = _riskOffPool;
+        riskOnPool = _riskOnPool;
+    }
+
+    function setRiskOnPoolRatio(uint _riskOnPoolRatio) external onlyOperator {
+        require(_riskOnPoolRatio >= 10, "ratio too low");
+        riskOnPoolRatio = _riskOnPoolRatio;
+    }
+
+    function setGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), "zero address");
+        governance = _governance;
+    }
+
     function initialize(
         address _governance, 
         address _riskOffPool, 

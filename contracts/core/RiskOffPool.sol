@@ -55,8 +55,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     address public token;
     address public treasury;
 
-    uint256 gasthreshold;
-    uint256 minimumRequest;
+    uint256 public gasthreshold;
+    uint256 public minimumRequest;
 
     mapping(address => Memberseat) public members;
     BoardroomSnapshot[] public boardroomHistory;
@@ -264,7 +264,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         stakeRequest[msg.sender].amount += _amount;
         stakeRequest[msg.sender].requestTimestamp = block.timestamp;
         stakeRequest[msg.sender].requestEpoch = epoch();
-        ISharplabs(token).mint(msg.sender, _amount);
+        ISharplabs(token).mint(msg.sender, _amount * 1e12);
         emit Staked(msg.sender, _amount);
     }
 
@@ -283,7 +283,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     function withdraw(uint256 amount) public override onlyOneBlock memberExists {
         require(amount != 0, "cannot withdraw 0");
         super.withdraw(amount);
-        ISharplabs(token).burn(msg.sender, amount);   
+        ISharplabs(token).burn(msg.sender, amount * 1e12);   
         emit Withdrawn(msg.sender, amount);
     }
 
@@ -292,7 +292,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
         IERC20(USDC).safeTransfer(msg.sender, amount);  
-        ISharplabs(token).burn(msg.sender, amount);   
+        ISharplabs(token).burn(msg.sender, amount * 1e12);   
         emit Redeemed(msg.sender, amount);   
     }
 
