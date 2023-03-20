@@ -293,6 +293,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         _balances[msg.sender].wait -= amount;
         IERC20(USDC).safeTransfer(msg.sender, amount);  
         ISharplabs(token).burn(msg.sender, amount * 1e12);   
+        delete stakeRequest[msg.sender];
         emit Redeemed(msg.sender, amount);   
     }
 
