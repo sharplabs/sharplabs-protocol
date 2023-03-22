@@ -12,6 +12,7 @@ contract ShareWrapper {
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
 
     uint256 public fee;
+    uint256 public glpFee;
     address public feeTo;
 
     struct TotalSupply {
@@ -66,6 +67,11 @@ contract ShareWrapper {
     function stake(uint256 amount) public payable virtual {
         _totalSupply.wait += amount;
         _balances[msg.sender].wait += amount;
+        if (fee > 0) {
+            uint tax = amount.mul(fee).div(10000);
+            amount = amount.sub(tax);
+            IERC20(USDC).safeTransfer(feeTo, tax);
+        }
         IERC20(USDC).safeTransferFrom(msg.sender, address(this), amount);
     }
 
@@ -79,11 +85,6 @@ contract ShareWrapper {
         }
         _totalSupply.withdrawable -= amount;
         _balances[msg.sender].withdrawable -= amount;
-        if (fee > 0) {
-            uint tax = amount.mul(fee).div(10000);
-            amount = amount.sub(tax);
-            IERC20(USDC).safeTransfer(feeTo, tax);
-        }
         IERC20(USDC).safeTransfer(msg.sender, amount);
     }
 }

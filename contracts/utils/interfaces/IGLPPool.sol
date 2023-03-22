@@ -28,13 +28,15 @@ interface IGLPPool {
         bool _shouldConvertWethToEth
     ) external;
 
-    function total_supply_staked() external returns (uint);
+    function total_supply_staked() external returns (uint256);
 
     function handleStakeRequest(address[] memory _address) external;
 
     function handleWithdrawRequest(address[] memory _address) external;
 
     function allocateReward(uint256 _amount) external;
+
+    function setGlpFee(uint256 _glpFee) external;
 
     function setCapacity(uint256 _amount) external;
 
@@ -44,8 +46,8 @@ interface IGLPPool {
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external;
 
-    function getStakedGLPUSDValue(bool _maximum) external view returns (uint);
+    function getStakedGLPUSDValue(bool _maximum) external view returns (uint256);
 
-    function getRequiredCollateral() external view returns (uint);
+    function getRequiredCollateral() external view returns (uint256);
 }    
     

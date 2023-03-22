@@ -31,6 +31,7 @@ contract Treasury is Operator {
     event Initialized(address indexed executor, uint256 at);
     event EpochUpdated(uint256 indexed atEpoch, uint256 timestamp);
     event CapacityUpdated(uint256 indexed atEpoch, uint256 _riskOffPoolCapacity, uint256 _riskOnPoolCapacity);
+    event GlpFeeUpdated(uint256 indexed atEpoch, uint256 _glpFee);
 
     modifier onlyGovernance() {
         require(governance == msg.sender, "Boardroom: caller is not the governance");
@@ -70,7 +71,7 @@ contract Treasury is Operator {
         riskOnPoolRatio = _riskOnPoolRatio;
     }
 
-    function setGovernance(address _governance) external onlyGovernance {
+    function setGovernance(address _governance) external onlyOperator {
         require(_governance != address(0), "zero address");
         governance = _governance;
     }
@@ -202,4 +203,10 @@ contract Treasury is Operator {
         IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
         emit CapacityUpdated(epoch, _riskOffPoolCapacity, _riskOnPoolCapacity);
     } 
+
+    function setGlpFee(uint _glpFee) external onlyGovernance {
+        IGLPPool(riskOffPool).setGlpFee(_glpFee);
+        IGLPPool(riskOnPool).setGlpFee(_glpFee);
+        emit GlpFeeUpdated(epoch, _glpFee);
+    }
 }
