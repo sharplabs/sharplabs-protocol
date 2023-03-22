@@ -14,7 +14,7 @@ import "../utils/interfaces/IRewardTracker.sol";
 import "../utils/interfaces/IGlpManager.sol";
 import "./ShareWrapper.sol";
 
-contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
+contract RiskOnPool is ShareWrapper, ContractGuard, Operator {
 
     using SafeERC20 for IERC20;
     using Address for address;
@@ -299,6 +299,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     }
 
     function redeem() external onlyOneBlock {
+        uint256 _epoch = epoch();
+        require(_epoch == stakeRequest[msg.sender].requestEpoch, "can not redeem");
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
@@ -328,7 +330,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = stakeRequest[user].amount;
-            require(stakeRequest[user].requestEpoch == _epoch - 1, "wrong epoch"); // check latest epoch
+            if (stakeRequest[user].requestEpoch == _epoch) continue;// check latest epoch
+//          require(stakeRequest[user].requestEpoch <= _epoch - 1, "wrong epoch"); // check latest epoch
             updateReward(user);
             _balances[user].wait -= amount;
             _balances[user].staked += amount;
@@ -344,7 +347,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = withdrawRequest[user].amount;
-            require(withdrawRequest[user].requestEpoch == _epoch - 1, "wrong epoch"); // check latest epoch
+            require(withdrawRequest[user].requestEpoch <= _epoch - 1, "wrong epoch"); // check latest epoch
             uint reward = claimReward(user);
             _balances[user].staked -= amount;
             _balances[user].withdrawable += amount;
