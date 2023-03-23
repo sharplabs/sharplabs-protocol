@@ -4,10 +4,12 @@ pragma solidity 0.8.13;
 
 import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
+import "../utils/math/Abs.sol";
 
 contract ShareWrapper {
 
     using SafeERC20 for IERC20;
+    using Abs for int256;
 
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
 
@@ -18,14 +20,14 @@ contract ShareWrapper {
         uint256 wait;
         uint256 staked;
         uint256 withdrawable;
-        uint256 reward;
+        int256 reward;
     }
 
     struct Balances {
         uint256 wait;
         uint256 staked;
         uint256 withdrawable;
-        uint256 reward;
+        int256 reward;
     }
 
     mapping(address => Balances) internal _balances;
@@ -43,7 +45,7 @@ contract ShareWrapper {
         return _totalSupply.withdrawable;
     }
 
-    function total_supply_reward() public view returns (uint256) {
+    function total_supply_reward() public view returns (int256) {
         return _totalSupply.reward;
     }
 
@@ -59,7 +61,7 @@ contract ShareWrapper {
         return _balances[account].withdrawable;
     }
 
-    function balance_reward(address account) public view returns (uint256) {
+    function balance_reward(address account) public view returns (int256) {
         return _balances[account].reward;
     }
 
@@ -72,10 +74,10 @@ contract ShareWrapper {
     function withdraw(uint256 amount) public virtual {
         require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than staked amount");
         if (balance_reward(msg.sender) > 0) {
-            uint _reward = _balances[msg.sender].reward;
+            int256 _reward = _balances[msg.sender].reward;
             _balances[msg.sender].reward = 0;
             _totalSupply.reward -= _reward;
-            IERC20(USDC).safeTransfer(msg.sender, _reward);
+            IERC20(USDC).safeTransfer(msg.sender, _reward.abs());
         }
         _totalSupply.withdrawable -= amount;
         _balances[msg.sender].withdrawable -= amount;

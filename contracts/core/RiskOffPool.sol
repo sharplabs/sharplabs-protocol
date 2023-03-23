@@ -15,25 +15,27 @@ import "../utils/interfaces/IGLPRouter.sol";
 import "../utils/interfaces/ITreasury.sol";
 import "../utils/interfaces/IRewardTracker.sol";
 import "../utils/interfaces/IGlpManager.sol";
+import "../utils/math/Abs.sol";
 import "./ShareWrapper.sol";
 
 contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pausable{
 
     using SafeERC20 for IERC20;
     using Address for address;
+    using Abs for int256;
 
     /* ========== DATA STRUCTURES ========== */
 
     struct Memberseat {
+        int256 rewardEarned;
         uint256 lastSnapshotIndex;
-        uint256 rewardEarned;
         uint256 epochTimerStart;
     }
 
     struct BoardroomSnapshot {
+        int256 rewardReceived;
+        int256 rewardPerShare;
         uint256 time;
-        uint256 rewardReceived;
-        uint256 rewardPerShare;
     }
 
     struct StakeInfo {
@@ -51,7 +53,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
     /* ========== STATE VARIABLES ========== */
 
     // reward
-    uint256 public currentEpochReward;
+    int256 public currentEpochReward;
     uint256 public totalWithdrawRequest;
 
     address public token;
@@ -91,8 +93,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
     event StakedByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event StakedETHByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event WithdrawnByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
-    event RewardPaid(address indexed user, uint256 reward);
-    event RewardAdded(address indexed user, uint256 reward);
+    event RewardPaid(address indexed user, int256 reward);
+    event RewardAdded(address indexed user, int256 reward);
     event Exit(address indexed user, uint256 amount);
     event StakeRequestIgnored(address indexed ignored, uint256 atEpoch);
     event WithdrawRequestIgnored(address indexed ignored, uint256 atEpoch);
@@ -254,21 +256,25 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
     }
     // =========== Member getters
 
-    function rewardPerShare() public view returns (uint256) {
+    function rewardPerShare() public view returns (int256) {
         return getLatestSnapshot().rewardPerShare;
     }
 
     // calculate earned reward of specified user
-    function earned(address member) public view returns (uint256) {
-        uint256 latestRPS = getLatestSnapshot().rewardPerShare;
-        uint256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
+    function earned(address member) public view returns (int256) {
+        int256 latestRPS = getLatestSnapshot().rewardPerShare;
+        int256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
 
-        return balance_staked(member) * (latestRPS - storedRPS) / 1e18 + members[member].rewardEarned;
+        return int(balance_staked(member)) * (latestRPS - storedRPS) / 1e18 + members[member].rewardEarned;
     }
 
     // required usd collateral in the contract
     function getRequiredCollateral() public view returns (uint256) {
-        return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + _totalSupply.reward;
+        if (_totalSupply.reward > 0) {
+            return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + _totalSupply.reward.abs();
+        } else {
+            return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable - _totalSupply.reward.abs();
+        }
     }
 
     // glp price
@@ -385,7 +391,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
                 emit WithdrawRequestIgnored(user, _epoch);
                 continue;  
             }
-            uint reward = claimReward(user);
+            int reward = claimReward(user);
             if (glpOutFee > 0) {
                 uint _glpOutFee = amount * glpOutFee / 10000;
                 amountReceived = amount - _glpOutFee;
@@ -411,9 +417,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
         }
     }
 
-    function claimReward(address member) internal returns (uint) {
+    function claimReward(address member) internal returns (int) {
         updateReward(member);
-        uint256 reward = members[member].rewardEarned;
+        int256 reward = members[member].rewardEarned;
         if (reward > 0) {
             members[member].epochTimerStart = epoch() - 1; // reset timer
             members[member].rewardEarned = 0;
@@ -460,13 +466,13 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
             _shouldConvertWethToEth);
     }
 
-    function allocateReward(uint256 amount) external onlyOneBlock onlyTreasury {
+    function allocateReward(int256 amount) external onlyOneBlock onlyTreasury {
         require(amount > 0, "Boardroom: Cannot allocate 0");
         require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
 
         // Create & add new snapshot
-        uint256 prevRPS = getLatestSnapshot().rewardPerShare;
-        uint256 nextRPS = prevRPS + amount * 1e18 / total_supply_staked();
+        int256 prevRPS = getLatestSnapshot().rewardPerShare;
+        int256 nextRPS = prevRPS + amount * 1e18 / int(total_supply_staked());
 
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
