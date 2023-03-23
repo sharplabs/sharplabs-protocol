@@ -49,5 +49,9 @@ interface IGLPPool {
     function getStakedGLPUSDValue(bool _maximum) external view returns (uint256);
 
     function getRequiredCollateral() external view returns (uint256);
+
+    function pause() external;
+
+    function unpause() external;
 }    
     

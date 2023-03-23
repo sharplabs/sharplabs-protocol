@@ -10,7 +10,6 @@ import "../utils/token/SafeERC20.sol";
 contract Treasury is Operator {
 
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
 
@@ -47,7 +46,7 @@ contract Treasury is Operator {
     
     // epoch
     function nextEpochPoint() public view returns (uint256) {
-        return startTime.add(epoch.mul(period));
+        return startTime + epoch * period;
     }
 
     function isInitialized() public view returns (bool) {
@@ -208,5 +207,13 @@ contract Treasury is Operator {
         IGLPPool(riskOffPool).setGlpFee(_glpInFee, _glpOutFee);
         IGLPPool(riskOnPool).setGlpFee(_glpInFee, _glpOutFee);
         emit GlpFeeUpdated(epoch, _glpInFee, _glpOutFee);
+    }
+
+    function pause(address _pool) external onlyGovernance {
+        IGLPPool(_pool).pause();
+    }
+
+    function unpause(address _pool) external onlyGovernance {
+        IGLPPool(_pool).unpause();
     }
 }

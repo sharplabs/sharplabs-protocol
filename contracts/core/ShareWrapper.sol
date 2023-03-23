@@ -6,7 +6,7 @@ import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
 
 contract ShareWrapper {
-    using SafeMath for uint256;
+
     using SafeERC20 for IERC20;
 
     address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
