@@ -67,6 +67,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     uint256 public withdrawLockupEpochs;
     uint256 public userExitEpochs;
 
+    uint256 public glpInFee;
+    uint256 public glpOutFee;
     uint256 public capacity;
 
     // flags
@@ -90,6 +92,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
     event RewardPaid(address indexed user, uint256 reward);
     event RewardAdded(address indexed user, uint256 reward);
     event Exit(address indexed user, uint256 amount);
+    event StakeRequestIgnored(address indexed ignored, uint256 atEpoch);
+    event WithdrawRequestIgnored(address indexed ignored, uint256 atEpoch);
 
     /* ========== Modifiers =============== */
 
@@ -116,6 +120,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         address _token,
         uint256 _fee,
         address _feeTo,
+        uint256 _glpInFee,
+        uint256 _glpOutFee,
         uint256 _gasthreshold,
         uint256 _minimumRequset,
         address _treasury
@@ -123,6 +129,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         token = _token;
         fee = _fee;
         feeTo = _feeTo;
+        glpInFee = _glpInFee;
+        glpOutFee = _glpOutFee;
         gasthreshold = _gasthreshold;
         minimumRequest = _minimumRequset;
         treasury = _treasury;
@@ -154,11 +162,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         fee = _fee;
     }
 
-    function setGlpFee(uint256 _glpFee) external onlyOperator {
-        require(_glpFee >= 0 && _glpFee <= 10000, "fee: out of range");
-        glpFee = _glpFee;
-    }
-
     function setFeeTo(address _feeTo) external onlyOperator {
         require(_feeTo != address(0), "zero address");
         feeTo = _feeTo;
@@ -168,6 +171,14 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         require(_capacity >= 0, "capacity: below 0");
         capacity = _capacity;
     }
+
+    function setGlpFee(uint256 _glpInFee, uint256 _glpOutFee) external onlyTreasury {
+        require(_glpInFee >= 0 && _glpInFee <= 10000, "fee: out of range");
+        require(_glpOutFee >= 0 && _glpOutFee <= 10000, "fee: out of range");
+        _glpInFee = _glpInFee;
+        glpOutFee = _glpOutFee;
+    }
+
 
     function setRouter(address _glpRouter, address _rewardRouter) external onlyOperator {
         glpRouter = _glpRouter;
@@ -271,6 +282,16 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         require(_amount >= minimumRequest, "stake amount too low");
         require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
         require(msg.value >= gasthreshold, "need more gas to handle request");
+        if (fee > 0) {
+            uint tax = _amount.mul(fee).div(10000);
+            _amount = _amount.sub(tax);
+            IERC20(USDC).safeTransferFrom(msg.sender, feeTo, tax);
+        }
+        if (glpInFee > 0) {
+            uint _glpInFee = _amount.mul(glpInFee).div(10000);
+            _amount = _amount.sub(_glpInFee);
+            IERC20(USDC).safeTransferFrom(msg.sender, address(this), _glpInFee);
+        }
         super.stake(_amount);
         stakeRequest[msg.sender].amount += _amount;
         stakeRequest[msg.sender].requestTimestamp = block.timestamp;
@@ -330,8 +351,10 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = stakeRequest[user].amount;
-            if (stakeRequest[user].requestEpoch == _epoch) continue;// check latest epoch
-//          require(stakeRequest[user].requestEpoch <= _epoch - 1, "wrong epoch"); // check latest epoch
+            if (stakeRequest[user].requestEpoch == _epoch) { // check latest epoch
+                emit StakeRequestIgnored(user, _epoch);
+                continue;  
+            }
             updateReward(user);
             _balances[user].wait -= amount;
             _balances[user].staked += amount;
@@ -347,13 +370,21 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator {
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
             uint amount = withdrawRequest[user].amount;
-            require(withdrawRequest[user].requestEpoch <= _epoch - 1, "wrong epoch"); // check latest epoch
+            uint amountReceived = amount; // user real received amount
+            if (withdrawRequest[user].requestEpoch == _epoch) { // check latest epoch
+                emit WithdrawRequestIgnored(user, _epoch);
+                continue;  
+            }
             uint reward = claimReward(user);
+            if (glpOutFee > 0) {
+                uint _glpOutFee = amount.mul(glpOutFee).div(10000);
+                amountReceived = amount.sub(_glpOutFee);
+            }
             _balances[user].staked -= amount;
-            _balances[user].withdrawable += amount;
+            _balances[user].withdrawable += amountReceived;
             _balances[user].reward += reward;
             _totalSupply.staked -= amount;
-            _totalSupply.withdrawable += amount;
+            _totalSupply.withdrawable += amountReceived;
             currentEpochReward += reward;
             totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch - 1; // reset timer

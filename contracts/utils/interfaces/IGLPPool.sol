@@ -36,7 +36,7 @@ interface IGLPPool {
 
     function allocateReward(uint256 _amount) external;
 
-    function setGlpFee(uint256 _glpFee) external;
+    function setGlpFee(uint256 _glpInFee, uint256 _glpOutFee) external;
 
     function setCapacity(uint256 _amount) external;
 

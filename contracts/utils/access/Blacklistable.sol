@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.13;
 
-import { Ownable } from "./Ownable.sol";
+import "./Ownable.sol";
 
 abstract contract Blacklistable is Ownable {
     address internal _blacklister;
