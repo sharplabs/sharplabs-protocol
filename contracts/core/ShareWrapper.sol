@@ -75,15 +75,17 @@ contract ShareWrapper {
         require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than staked amount");
         _totalSupply.withdrawable -= amount;
         _balances[msg.sender].withdrawable -= amount;
-        uint _reward = balance_reward(msg.sender);
+        int _reward = balance_reward(msg.sender);
         if (_reward > 0) {
-            int256 _reward = _balances[msg.sender].reward;
             _balances[msg.sender].reward = 0;
             _totalSupply.reward -= _reward;
             IERC20(USDC).safeTransfer(msg.sender, amount + _reward.abs());
-        } else if (){
-            int256 reward = _balances
+        } else if (_reward < 0) {
+            _balances[msg.sender].reward = 0;
+            _totalSupply.reward -= _reward;
+            IERC20(USDC).safeTransfer(msg.sender, amount - _reward.abs());            
+        } else {
+            IERC20(USDC).safeTransfer(msg.sender, amount);
         }
-        IERC20(USDC).safeTransfer(msg.sender, amount);
     }
 }
