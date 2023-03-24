@@ -73,16 +73,17 @@ contract ShareWrapper {
 
     function withdraw(uint256 amount) public virtual {
         require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than staked amount");
-        if (balance_reward(msg.sender) > 0) {
+        _totalSupply.withdrawable -= amount;
+        _balances[msg.sender].withdrawable -= amount;
+        uint _reward = balance_reward(msg.sender);
+        if (_reward > 0) {
             int256 _reward = _balances[msg.sender].reward;
             _balances[msg.sender].reward = 0;
             _totalSupply.reward -= _reward;
-            IERC20(USDC).safeTransfer(msg.sender, _reward.abs());
-        } else {
+            IERC20(USDC).safeTransfer(msg.sender, amount + _reward.abs());
+        } else if (){
             int256 reward = _balances
         }
-        _totalSupply.withdrawable -= amount;
-        _balances[msg.sender].withdrawable -= amount;
         IERC20(USDC).safeTransfer(msg.sender, amount);
     }
 }
