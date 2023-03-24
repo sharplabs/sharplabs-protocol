@@ -78,6 +78,8 @@ contract ShareWrapper {
             _balances[msg.sender].reward = 0;
             _totalSupply.reward -= _reward;
             IERC20(USDC).safeTransfer(msg.sender, _reward.abs());
+        } else {
+            int256 reward = _balances
         }
         _totalSupply.withdrawable -= amount;
         _balances[msg.sender].withdrawable -= amount;
