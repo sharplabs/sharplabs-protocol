@@ -468,9 +468,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pau
     }
 
     function allocateReward(int256 amount) external onlyOneBlock onlyTreasury {
-        require(amount > 0, "Boardroom: Cannot allocate 0");
-        require(total_supply_staked() > 0, "Boardroom: Cannot allocate when totalSupply_staked is 0");
-
+        require(total_supply_staked() > 0, "rewards cannot be allocated when totalSupply is 0");
         // Create & add new snapshot
         int256 prevRPS = getLatestSnapshot().rewardPerShare;
         int256 nextRPS = prevRPS + amount * 1e18 / int(total_supply_staked());
