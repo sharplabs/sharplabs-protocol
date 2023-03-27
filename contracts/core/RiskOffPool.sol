@@ -18,7 +18,7 @@ import "../utils/interfaces/IGlpManager.sol";
 import "../utils/math/Abs.sol";
 import "./ShareWrapper.sol";
 
-contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pausable{
+contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pausable {
 
     using SafeERC20 for IERC20;
     using Address for address;
@@ -142,7 +142,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
         BoardroomSnapshot memory genesisSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: 0, rewardPerShare: 0});
         boardroomHistory.push(genesisSnapshot);
 
-        withdrawLockupEpochs = 2; // Lock for 2 epochs (16h) before release withdraw
+        withdrawLockupEpochs = 2; // Lock for 2 epochs (48h) before release withdraw
+        userExitEpochs = 5;
 
         initialized = true;
 
@@ -151,21 +152,21 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
 
     /* ========== CONFIG ========== */
 
-    function pause() external onlyOperator {
+    function pause() external onlyTreasury {
         super._pause();
     }
 
-    function unpause() external onlyOperator {
+    function unpause() external onlyTreasury {
         super._unpause();
     }
 
     function setLockUp(uint256 _withdrawLockupEpochs) external onlyOperator {
-        require(_withdrawLockupEpochs >= 0, "withdrawLockupEpochs: below zero");
+        require(_withdrawLockupEpochs > 0, "withdrawLockupEpochs must be greater than zero");
         withdrawLockupEpochs = _withdrawLockupEpochs;
     }
 
     function setExitEpochs(uint256 _userExitEpochs) external onlyOperator {
-        require(_userExitEpochs >= 0, "userExitEpochs: below zero");
+        require(_userExitEpochs > 0, "userExitEpochs must be greater than zero");
         userExitEpochs = _userExitEpochs;
     }
 
@@ -175,12 +176,12 @@ contract RiskOffPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pa
     }
 
     function setFeeTo(address _feeTo) external onlyOperator {
-        require(_feeTo != address(0), "zero address");
+        require(_feeTo != address(0), "feeTo can not be zero address");
         feeTo = _feeTo;
     }
 
     function setCapacity(uint256 _capacity) external onlyTreasury {
-        require(_capacity >= 0, "capacity: below 0");
+        require(_capacity >= 0, "capacity must be greater than or equal to 0");
         capacity = _capacity;
     }
 
