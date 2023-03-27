@@ -489,7 +489,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pau
     function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
         payable(to).transfer(amount);
     }
-
 }
 
 
