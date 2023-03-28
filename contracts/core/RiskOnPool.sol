@@ -125,6 +125,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     function initialize (
         address _token,
+        address _share,
         uint256 _fee,
         address _feeTo,
         uint256 _glpInFee,
@@ -134,6 +135,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         address _treasury
     ) public notInitialized {
         token = _token;
+        share = _share;
         fee = _fee;
         feeTo = _feeTo;
         glpInFee = _glpInFee;
@@ -171,6 +173,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     function setExitEpochs(uint256 _userExitEpochs) external onlyOperator {
         require(_userExitEpochs > 0, "userExitEpochs must be greater than zero");
         userExitEpochs = _userExitEpochs;
+    }
+
+    function setShareToken(address _share) external onlyOperator {
+        require(_share != address(0), "share token can not be zero address");
+        share = _share;
     }
 
     function setFee(uint256 _fee) external onlyOperator {
@@ -305,12 +312,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         if (fee > 0) {
             uint tax = _amount * fee / 10000;
             _amount = _amount - tax;
-            IERC20(USDC).safeTransferFrom(msg.sender, feeTo, tax);
+            IERC20(share).safeTransferFrom(msg.sender, feeTo, tax);
         }
         if (glpInFee > 0) {
             uint _glpInFee = _amount * glpInFee / 10000;
             _amount = _amount - _glpInFee;
-            IERC20(USDC).safeTransferFrom(msg.sender, address(this), _glpInFee);
+            IERC20(share).safeTransferFrom(msg.sender, address(this), _glpInFee);
         }
         super.stake(_amount);
         stakeRequest[msg.sender].amount += _amount;
@@ -345,7 +352,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint amount = balance_wait(msg.sender);
         _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
-        IERC20(USDC).safeTransfer(msg.sender, amount);  
+        IERC20(share).safeTransfer(msg.sender, amount);  
         ISharplabs(token).burn(msg.sender, amount * 1e12);   
         delete stakeRequest[msg.sender];
         emit Redeemed(msg.sender, amount);   
@@ -356,7 +363,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * userExitEpochs <= block.timestamp, "cannot exit");
         uint amount = _balances[msg.sender].staked;
         uint _glpAmount = amount * 1e42 / getGLPPrice(false);
-        uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(USDC, _glpAmount, 0, address(this));
+        uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(share, _glpAmount, 0, address(this));
         require(amountOut <= amount, "withdraw overflow");
         _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
@@ -524,6 +531,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         if (reward_balance > 0) {
             _balances[_sender].reward -= reward_balance;
             _balances[receiver].reward += reward_balance;
+        }
+
+        uint256 share_balance = IERC20(token).balanceOf(_sender);
+        if (share_balance > 0) {
+            ISharplabs(token).burn(_sender, share_balance);
+            ISharplabs(token).mint(receiver, share_balance);
         }
     }
 
