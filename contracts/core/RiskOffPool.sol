@@ -458,7 +458,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
-    function handleRwards(
+    function handleRewards(
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
         bool _shouldClaimEsGmx,
@@ -467,7 +467,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external onlyTreasury {
-        IGLPRouter(rewardRouter).handleRwards(
+        IGLPRouter(rewardRouter).handleRewards(
             _shouldClaimGmx,
             _shouldStakeGmx,
             _shouldClaimEsGmx,

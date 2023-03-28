@@ -22,7 +22,7 @@ interface IGLPRouter {
         address _receiver
     ) external returns (uint256);
 
-    function handleRwards(
+    function handleRewards(
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
         bool _shouldClaimEsGmx,

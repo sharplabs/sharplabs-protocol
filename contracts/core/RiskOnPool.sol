@@ -458,7 +458,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
     }
 
-    function handleRwards(
+    function handleRewards(
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
         bool _shouldClaimEsGmx,
@@ -467,7 +467,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external onlyTreasury {
-        IGLPRouter(rewardRouter).handleRwards(
+        IGLPRouter(rewardRouter).handleRewards(
             _shouldClaimGmx,
             _shouldStakeGmx,
             _shouldClaimEsGmx,
@@ -540,7 +540,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         }
     }
 
-    function _validateReceiver(address _receiver) private view {
+    function _validateReceiver(address _receiver) internal view {
         require(balance_wait(_receiver) == 0, "invalid receiver: receiver wait_balance is not equal to zero");
         require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked_balance is not equal to zero");
         require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw_balance is not equal to zero");
