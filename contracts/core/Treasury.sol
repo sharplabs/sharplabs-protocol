@@ -117,7 +117,7 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
-    function sendPoolFundsEth(address _pool, uint _amount) external onlyGovernance {
+    function sendPoolFundsETH(address _pool, uint _amount) external onlyGovernance {
         require(_amount <= address(this).balance, "insufficient funds");
         payable(_pool).transfer(_amount);
     }
@@ -169,7 +169,7 @@ contract Treasury is Operator {
         IGLPPool(_pool).handleWithdrawRequest(_address);
     }
     
-    function handleRwards(
+    function handleRewards(
         address _pool,
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
@@ -179,7 +179,7 @@ contract Treasury is Operator {
         bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external onlyGovernance {
-        IGLPPool(_pool).handleRwards(
+        IGLPPool(_pool).handleRewards(
             _shouldClaimGmx,
             _shouldStakeGmx,
             _shouldClaimEsGmx,

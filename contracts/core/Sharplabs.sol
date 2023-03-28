@@ -3,14 +3,16 @@
 pragma solidity 0.8.13;
 
 import "../utils/token/ERC20.sol";
+import "../utils/access/Operator.sol";
 
-contract Sharplabs is ERC20 {
+contract Sharplabs is ERC20, Operator {
 
     address public riskOffPool;
     address public riskOnPool;
 
     // flags
-    bool public initialized = false;
+    bool public initialized;
+    bool public isTransferForbidden = true;
 
     mapping(address => uint256) private _balances;
 
@@ -23,7 +25,8 @@ contract Sharplabs is ERC20 {
         _;
     }
 
-    constructor() ERC20("Sharplabs", "Sharplabs"){}
+    constructor() ERC20("Sharplabs", "Sharplabs"){
+    }
 
     function initialize(address _riskOffPool, address _riskOnPool) public notInitialized {
         riskOffPool = _riskOffPool;
@@ -40,5 +43,20 @@ contract Sharplabs is ERC20 {
     function burn(address account, uint256 amount) external {
         require(msg.sender == riskOffPool || msg.sender == riskOnPool, "caller is not the pool");
         _burn(account, amount);
+    }
+    
+    function _transfer(address from, address to, uint256 amount) internal override {
+        require(!isTransferForbidden, "transfer is forbidden");
+        super._transfer(from, to, amount);
+    }
+
+    function forbidTransfer() external onlyOperator {
+        require(!isTransferForbidden, "transfer has been forbidden");
+        isTransferForbidden = true;
+    }
+
+    function allowTransfer() external onlyOperator {
+        require(isTransferForbidden, "transfer has been allowed");
+        isTransferForbidden = false;
     }
 }

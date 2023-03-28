@@ -18,7 +18,7 @@ interface IGLPPool {
         address _receiver
     ) external;
 
-    function handleRwards(
+    function handleRewards(
         bool _shouldClaimGmx,
         bool _shouldStakeGmx,
         bool _shouldClaimEsGmx,
