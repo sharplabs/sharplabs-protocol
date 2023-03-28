@@ -7,6 +7,7 @@ import "../utils/token/SafeERC20.sol";
 import "../utils/token/ISharplabs.sol";
 
 import "../utils/security/ContractGuard.sol";
+import "../utils/security/ReentrancyGuard.sol";
 import "../utils/access/Operator.sol";
 import "../utils/access/Blacklistable.sol";
 import "../utils/security/Pausable.sol";
@@ -18,7 +19,7 @@ import "../utils/interfaces/IGlpManager.sol";
 import "../utils/math/Abs.sol";
 import "./ShareWrapper.sol";
 
-contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pausable {
+contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, Blacklistable, Pausable {
 
     using SafeERC20 for IERC20;
     using Address for address;
@@ -67,6 +68,8 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pau
 
     mapping(address => StakeInfo) public stakeRequest;
     mapping(address => WithdrawInfo) public withdrawRequest;
+
+    mapping (address => address) public pendingReceivers;
 
     uint256 public withdrawLockupEpochs;
     uint256 public userExitEpochs;
@@ -469,6 +472,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pau
 
     function allocateReward(int256 amount) external onlyOneBlock onlyTreasury {
         require(total_supply_staked() > 0, "rewards cannot be allocated when totalSupply is 0");
+
         // Create & add new snapshot
         int256 prevRPS = getLatestSnapshot().rewardPerShare;
         int256 nextRPS = prevRPS + amount * 1e18 / int(total_supply_staked());
@@ -478,6 +482,56 @@ contract RiskOnPool is ShareWrapper, ContractGuard, Operator, Blacklistable, Pau
 
         _totalSupply.reward += amount;
         emit RewardAdded(msg.sender, amount);
+    }
+
+    function signalTransfer(address _receiver) external nonReentrant {
+        require(stakeRequest[msg.sender].amount == 0, "RiskOffPool: sender has stakeRequest");
+        require(withdrawRequest[msg.sender].amount == 0, "RiskOffPool: sender has withdrawRequest");
+
+        _validateReceiver(_receiver);
+        pendingReceivers[msg.sender] = _receiver;
+    }
+
+    function acceptTransfer(address _sender) external nonReentrant {
+        require(stakeRequest[_sender].amount == 0, "RiskOffPool: sender has stakeRequest");
+        require(withdrawRequest[_sender].amount == 0, "RiskOffPool: sender has withdrawRequest");
+
+        address receiver = msg.sender;
+        require(pendingReceivers[_sender] == receiver, "RiskOffPool: transfer not signalled");
+        delete pendingReceivers[_sender];
+
+        _validateReceiver(receiver);
+
+        uint256 wait_balance = balance_wait(_sender);
+        if (wait_balance > 0) {
+            _balances[_sender].wait -= wait_balance;
+            _balances[receiver].wait += wait_balance;
+        }
+
+        uint256 staked_balance = balance_staked(_sender);
+        if (staked_balance > 0) {
+            _balances[_sender].staked -= staked_balance;
+            _balances[receiver].staked += staked_balance;
+        }
+
+        uint256 withdraw_balance = balance_withdraw(_sender);
+        if (withdraw_balance > 0) {
+            _balances[_sender].withdrawable -= withdraw_balance;
+            _balances[receiver].withdrawable += withdraw_balance;
+        }
+
+        int256 reward_balance = balance_reward(_sender);
+        if (reward_balance > 0) {
+            _balances[_sender].reward -= reward_balance;
+            _balances[receiver].reward += reward_balance;
+        }
+    }
+
+    function _validateReceiver(address _receiver) private view {
+        require(balance_wait(_receiver) == 0, "invalid receiver: receiver wait_balance is not equal to zero");
+        require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked_balance is not equal to zero");
+        require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw_balance is not equal to zero");
+        require(balance_reward(_receiver) == 0, "invalid receiver: receiver reward_balance is not equal to zero");
     }
 
     function treasuryWithdrawFunds(address _token, uint256 amount, address to) external onlyTreasury {
