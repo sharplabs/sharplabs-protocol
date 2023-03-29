@@ -392,7 +392,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         }
     }
 
-    function handleWithdrawRequest(address[] memory _address) external onlyOneBlock onlyTreasury {
+    function handleWithdrawRequest(address[] memory _address) external onlyTreasury {
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
@@ -417,6 +417,15 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
             members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];
         }
+    }
+
+    function removeWithdrawRequest(address[] memory _address) external onlyTreasury {
+        for (uint i = 0; i < _address.length; i++) {
+            address user = _address[i];
+            uint amount = withdrawRequest[user].amount;
+            totalWithdrawRequest -= amount;
+            delete withdrawRequest[user];
+        }      
     }
 
     function updateReward(address member) internal {
@@ -540,7 +549,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         }
     }
 
-    function _validateReceiver(address _receiver) internal view {
+    function _validateReceiver(address _receiver) private view {
         require(balance_wait(_receiver) == 0, "invalid receiver: receiver wait_balance is not equal to zero");
         require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked_balance is not equal to zero");
         require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw_balance is not equal to zero");

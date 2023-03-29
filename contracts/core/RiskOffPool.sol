@@ -392,7 +392,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         }
     }
 
-    function handleWithdrawRequest(address[] memory _address) external onlyOneBlock onlyTreasury {
+    function handleWithdrawRequest(address[] memory _address) external onlyTreasury {
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
@@ -417,6 +417,15 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];
         }
+    }
+
+    function removeWithdrawRequest(address[] memory _address) external onlyTreasury {
+        for (uint i = 0; i < _address.length; i++) {
+            address user = _address[i];
+            uint amount = withdrawRequest[user].amount;
+            totalWithdrawRequest -= amount;
+            delete withdrawRequest[user];
+        }      
     }
 
     function updateReward(address member) internal {
