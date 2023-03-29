@@ -33,12 +33,12 @@ contract Treasury is Operator {
     event GlpFeeUpdated(uint256 indexed atEpoch, uint256 _glpInFee, uint256 _glpOutFee);
 
     modifier onlyGovernance() {
-        require(governance == msg.sender, "Boardroom: caller is not the governance");
+        require(governance == msg.sender, "caller is not the governance");
         _;
     }
 
     modifier notInitialized() {
-        require(!initialized, "Boardroom: already initialized");
+        require(!initialized, "already initialized");
         _;
     }
 
@@ -46,7 +46,7 @@ contract Treasury is Operator {
     
     // epoch
     function nextEpochPoint() public view returns (uint256) {
-        return startTime + epoch * period;
+        return startTime + (epoch + 1) * period;
     }
 
     function isInitialized() public view returns (bool) {

@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.13;
 
+import "../utils/token/IERC20.sol";
 import "../utils/token/ERC20.sol";
 import "../utils/access/Operator.sol";
 
@@ -58,5 +59,14 @@ contract Sharplabs is ERC20, Operator {
     function allowTransfer() external onlyOperator {
         require(isTransferForbidden, "transfer has been allowed");
         isTransferForbidden = false;
+    }
+
+    function governanceRecoverUnsupported(
+        IERC20 _token,
+        uint256 _amount,
+        address _to
+    ) external onlyOperator {
+        require(_to != address(0), "zero");
+        _token.transfer(_to, _amount);
     }
 }

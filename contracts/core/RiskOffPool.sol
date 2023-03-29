@@ -101,6 +101,10 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     event Exit(address indexed user, uint256 amount);
     event StakeRequestIgnored(address indexed ignored, uint256 atEpoch);
     event WithdrawRequestIgnored(address indexed ignored, uint256 atEpoch);
+    event HandledStakeRequest(uint256 indexed atEpoch, address[] _address);
+    event HandledWithdrawRequest(uint256 indexed atEpoch, address[] _address);
+    event HandledReward(uint256 indexed atEpoch, uint256 time);
+
 
     /* ========== Modifiers =============== */
 
@@ -330,7 +334,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     function withdraw_request(uint256 _amount) external payable notBlacklisted(msg.sender) whenNotPaused {
         require(_amount >= minimumRequest, "withdraw amount too low");
         require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount out of range");
-        require(members[msg.sender].epochTimerStart + withdrawLockupEpochs <= epoch(), "Boardroom: still in withdraw lockup");
+        require(members[msg.sender].epochTimerStart + withdrawLockupEpochs <= epoch(), "still in withdraw lockup");
         require(msg.value >= gasthreshold, "need more gas to handle request");
         withdrawRequest[msg.sender].amount += _amount;
         withdrawRequest[msg.sender].requestTimestamp = block.timestamp;
@@ -390,6 +394,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             members[user].epochTimerStart = _epoch - 1;  // reset timer   
             delete stakeRequest[user];
         }
+        emit HandledStakeRequest(_epoch, _address);
     }
 
     function handleWithdrawRequest(address[] memory _address) external onlyTreasury {
@@ -417,6 +422,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];
         }
+        emit HandledWithdrawRequest(_epoch, _address);
     }
 
     function removeWithdrawRequest(address[] memory _address) external onlyTreasury {
@@ -476,6 +482,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         bool _shouldClaimWeth,
         bool _shouldConvertWethToEth
     ) external onlyTreasury {
+        uint256 _epoch = epoch();
         IGLPRouter(rewardRouter).handleRewards(
             _shouldClaimGmx,
             _shouldStakeGmx,
@@ -484,6 +491,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             _shouldStakeMultiplierPoints,
             _shouldClaimWeth,
             _shouldConvertWethToEth);
+        emit HandledReward(_epoch, block.timestamp);
     }
 
     function allocateReward(int256 amount) external onlyOneBlock onlyTreasury {
