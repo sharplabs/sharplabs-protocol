@@ -153,7 +153,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
 
         withdrawLockupEpochs = 2; // Lock for 2 epochs (48h) before release withdraw
         userExitEpochs = 4;
-        capacity = 1e6;
+        capacity = 1e12;
         initialized = true;
 
         emit Initialized(msg.sender, block.number);
