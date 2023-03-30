@@ -142,8 +142,8 @@ contract Treasury is Operator {
     }
 
     // allocate reward at every epoch
-    function allocateReward(address _riskOffPool, uint256 _amount) external onlyGovernance {
-        IGLPPool(_riskOffPool).allocateReward(_amount);
+    function allocateReward(address _pool, int256 _amount) external onlyGovernance {
+        IGLPPool(_pool).allocateReward(_amount);
     }
 
     // deposit funds from gov wallet to treasury

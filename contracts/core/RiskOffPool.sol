@@ -152,8 +152,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         boardroomHistory.push(genesisSnapshot);
 
         withdrawLockupEpochs = 2; // Lock for 2 epochs (48h) before release withdraw
-        userExitEpochs = 5;
-
+        userExitEpochs = 4;
+        capacity = 1e6;
         initialized = true;
 
         emit Initialized(msg.sender, block.number);
@@ -266,7 +266,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         return ITreasury(treasury).epoch();
     }
 
-    function nextEpochPoint() external view returns (uint256) {
+    function nextEpochPoint() public view returns (uint256) {
         return ITreasury(treasury).nextEpochPoint();
     }
     // =========== Member getters
@@ -364,7 +364,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
 
     function exit() onlyOneBlock external notBlacklisted(msg.sender) whenNotPaused {
         require(withdrawRequest[msg.sender].requestTimestamp != 0, "no request");
-        require(withdrawRequest[msg.sender].requestTimestamp + ITreasury(treasury).period() * userExitEpochs <= block.timestamp, "cannot exit");
+        require(nextEpochPoint() + ITreasury(treasury).period() * userExitEpochs <= block.timestamp, "cannot exit");
         uint amount = _balances[msg.sender].staked;
         uint _glpAmount = amount * 1e42 / getGLPPrice(false);
         uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(share, _glpAmount, 0, address(this));
