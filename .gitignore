@@ -10,4 +10,5 @@ cache/
 typechain/
 yarn.lock/
 scripts/
+RiskOnPool.sol
 
