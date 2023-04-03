@@ -8,4 +8,6 @@ artifacts/
 node_modules
 cache/
 typechain/
-yarn.lock
+yarn.lock/
+scripts/
+
