@@ -20,6 +20,7 @@ contract Treasury is Operator {
     uint256 public startTime;
     uint256 public period = 24 hours;
     uint256 public riskOnPoolRatio;
+    uint256 public lastEpochPoint;
 
     // flags
     bool public initialized = false;
@@ -43,11 +44,7 @@ contract Treasury is Operator {
     
     // epoch
     function nextEpochPoint() public view returns (uint256) {
-        return lastEpochPoint() + period;
-    }
-
-    function lastEpochPoint() public view returns (uint256) {
-        return startTime + epoch * period;
+        return lastEpochPoint + period;
     }
 
     function isInitialized() public view returns (bool) {
@@ -90,6 +87,7 @@ contract Treasury is Operator {
         riskOnPool = _riskOnPool;
         riskOnPoolRatio = _riskOnPoolRatio;
         startTime = _startTime;
+        lastEpochPoint = startTime;
         initialized = true;
         emit Initialized(msg.sender, block.number);
     }
@@ -195,6 +193,7 @@ contract Treasury is Operator {
     function updateEpoch() external onlyGovernance {
         require(block.timestamp >= nextEpochPoint(), "Treasury: not opened yet");
         epoch += 1;
+        lastEpochPoint += period;
         IGLPPool(riskOffPool).resetCurrentEpochReward();
         IGLPPool(riskOnPool).resetCurrentEpochReward();
         emit EpochUpdated(epoch, block.timestamp);
