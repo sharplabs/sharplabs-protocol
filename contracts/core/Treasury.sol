@@ -11,17 +11,14 @@ contract Treasury is Operator {
 
     using SafeERC20 for IERC20;
 
-    address constant public USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
-
+    address public share;
     address public governance;
     address public riskOffPool;
     address public riskOnPool;
 
-
     uint256 public epoch;
     uint256 public startTime;
     uint256 public period = 24 hours;
-
     uint256 public riskOnPoolRatio;
 
     // flags
@@ -46,7 +43,11 @@ contract Treasury is Operator {
     
     // epoch
     function nextEpochPoint() public view returns (uint256) {
-        return startTime + (epoch + 1) * period;
+        return lastEpochPoint() + period;
+    }
+
+    function lastEpochPoint() public view returns (uint256) {
+        return startTime + epoch * period;
     }
 
     function isInitialized() public view returns (bool) {
@@ -76,12 +77,14 @@ contract Treasury is Operator {
     }
 
     function initialize(
+        address _share,
         address _governance, 
         address _riskOffPool, 
         address _riskOnPool,
         uint256 _riskOnPoolRatio,
         uint256 _startTime
     ) public notInitialized {
+        share =_share;
         governance = _governance;
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
@@ -124,13 +127,13 @@ contract Treasury is Operator {
 
     // withdraw pool funds(ERC20 tokens) to specified address
     function withdrawPoolFunds(address _pool, address _token, uint256 _amount, address _to, bool _maximum) external onlyGovernance {
-        if (_pool == riskOffPool && _token == USDC) {
-            uint USDCAmount = IERC20(USDC).balanceOf(_pool);
-            require(IGLPPool(_pool).getRequiredCollateral() + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + USDCAmount, "cannot withdraw pool funds");
+        if (_pool == riskOffPool && _token == share) {
+            uint shareAmount = IERC20(share).balanceOf(_pool);
+            require(IGLPPool(_pool).getRequiredCollateral() + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "cannot withdraw pool funds");
         }
-        if (_pool == riskOnPool && _token == USDC) {
-            uint USDCAmount = IERC20(USDC).balanceOf(_pool);
-            require(IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + USDCAmount, "cannot withdraw pool funds");
+        if (_pool == riskOnPool && _token == share) {
+            uint shareAmount = IERC20(share).balanceOf(_pool);
+            require(IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "cannot withdraw pool funds");
         }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }

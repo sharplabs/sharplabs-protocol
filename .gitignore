@@ -9,6 +9,3 @@ node_modules
 cache/
 typechain/
 yarn.lock/
-scripts/
-RiskOnPool.sol
-

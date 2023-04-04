@@ -17,7 +17,7 @@ import "../utils/interfaces/IGlpManager.sol";
 import "../utils/math/Abs.sol";
 import "./ShareWrapper.sol";
 
-contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, Blacklistable, Pausable {
+contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, Blacklistable, Pausable {
 
     using SafeERC20 for IERC20;
     using Address for address;
@@ -493,7 +493,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     }
 
     function allocateReward(int256 amount) external onlyOneBlock onlyTreasury {
-        require(amount >= 0, "Rewards cannot be less than 0");
         require(total_supply_staked() > 0, "rewards cannot be allocated when totalSupply is 0");
 
         // Create & add new snapshot
