@@ -52,7 +52,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     /* ========== STATE VARIABLES ========== */
 
     // reward
-    int256 public currentEpochReward;
     uint256 public totalWithdrawRequest;
 
     address public token;
@@ -231,10 +230,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         require(_minimumRequest >= 0, "minimumRequest below zero");
         minimumRequest = _minimumRequest;
     }   
-
-    function resetCurrentEpochReward() external onlyTreasury {
-        currentEpochReward = 0;
-    }
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -415,7 +410,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             _balances[user].reward += reward;
             _totalSupply.staked -= amount;
             _totalSupply.withdrawable += amountReceived;
-            currentEpochReward += reward;
             totalWithdrawRequest -= amount;
             members[user].epochTimerStart = _epoch - 1; // reset timer
             delete withdrawRequest[user];

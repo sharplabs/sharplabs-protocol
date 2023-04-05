@@ -53,8 +53,9 @@ contract Treasury is Operator {
 
     /* ========== CONFIG ========== */
 
-    function setPeriod(uint _period) external onlyOperator {
+    function setPeriod(uint _period) external {
         require(_period > 0, "zero period");
+        require(operator() == msg.sender || governance == msg.sender, "period: wrong caller");
         period = _period;
     }
 
@@ -87,7 +88,7 @@ contract Treasury is Operator {
         riskOnPool = _riskOnPool;
         riskOnPoolRatio = _riskOnPoolRatio;
         startTime = _startTime;
-        lastEpochPoint = startTime;
+        lastEpochPoint = _startTime;
         initialized = true;
         emit Initialized(msg.sender, block.number);
     }
@@ -194,8 +195,6 @@ contract Treasury is Operator {
         require(block.timestamp >= nextEpochPoint(), "Treasury: not opened yet");
         epoch += 1;
         lastEpochPoint += period;
-        IGLPPool(riskOffPool).resetCurrentEpochReward();
-        IGLPPool(riskOnPool).resetCurrentEpochReward();
         emit EpochUpdated(epoch, block.timestamp);
     }
 
