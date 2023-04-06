@@ -94,7 +94,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     event StakedETHByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event WithdrawnByGov(uint256 indexed atEpoch, uint256 amount, uint256 time);
     event RewardPaid(address indexed user, int256 reward);
-    event RewardAdded(address indexed user, int256 reward);
+    event RewardAdded(uint256 indexed atEpoch, uint256 period, uint256 totalStakedAmount, int256 reward);
     event Exit(address indexed user, uint256 amount);
     event StakeRequestIgnored(address indexed ignored, uint256 atEpoch);
     event WithdrawRequestIgnored(address indexed ignored, uint256 atEpoch);
@@ -374,11 +374,13 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            require(stakeRequest[user].requestTimestamp != 0, "no request");
             uint amount = stakeRequest[user].amount;
             if (stakeRequest[user].requestEpoch == _epoch) { // check latest epoch
                 emit StakeRequestIgnored(user, _epoch);
                 continue;  
+            }
+            if (stakeRequest[user].requestTimestamp == 0) {
+                continue;
             }
             updateReward(user);
             _balances[user].wait -= amount;
@@ -395,12 +397,14 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
-            require(withdrawRequest[user].requestTimestamp != 0, "no request");
             uint amount = withdrawRequest[user].amount;
             uint amountReceived = amount; // user real received amount
             if (withdrawRequest[user].requestEpoch == _epoch) { // check latest epoch
                 emit WithdrawRequestIgnored(user, _epoch);
                 continue;  
+            }
+            if (withdrawRequest[user].requestTimestamp == 0) {
+                continue;
             }
             claimReward(user);
             if (glpOutFee > 0) {
@@ -495,7 +499,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         boardroomHistory.push(newSnapshot);
 
         _totalSupply.reward += amount;
-        emit RewardAdded(msg.sender, amount);
+        emit RewardAdded(epoch(), ITreasury(treasury).period(), total_supply_staked(), amount);
     }
 
     function signalTransfer(address _receiver) external nonReentrant {
