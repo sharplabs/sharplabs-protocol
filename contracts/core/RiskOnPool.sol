@@ -374,6 +374,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
+            require(stakeRequest[user].requestTimestamp != 0, "no request");
             uint amount = stakeRequest[user].amount;
             if (stakeRequest[user].requestEpoch == _epoch) { // check latest epoch
                 emit StakeRequestIgnored(user, _epoch);
@@ -394,20 +395,20 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint256 _epoch = epoch();
         for (uint i = 0; i < _address.length; i++) {
             address user = _address[i];
+            require(withdrawRequest[user].requestTimestamp != 0, "no request");
             uint amount = withdrawRequest[user].amount;
             uint amountReceived = amount; // user real received amount
             if (withdrawRequest[user].requestEpoch == _epoch) { // check latest epoch
                 emit WithdrawRequestIgnored(user, _epoch);
                 continue;  
             }
-            int reward = claimReward(user);
+            claimReward(user);
             if (glpOutFee > 0) {
                 uint _glpOutFee = amount * glpOutFee / 10000;
                 amountReceived = amount - _glpOutFee;
             }
             _balances[user].staked -= amount;
             _balances[user].withdrawable += amountReceived;
-            _balances[user].reward += reward;
             _totalSupply.staked -= amount;
             _totalSupply.withdrawable += amountReceived;
             totalWithdrawRequest -= amount;
@@ -438,12 +439,9 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     function claimReward(address member) internal returns (int) {
         updateReward(member);
         int256 reward = members[member].rewardEarned;
-        if (reward > 0) {
-            members[member].epochTimerStart = epoch() - 1; // reset timer
-            members[member].rewardEarned = 0;
-            _balances[msg.sender].reward += reward;
-            emit RewardPaid(member, reward);
-        }
+        members[member].rewardEarned = 0;
+        _balances[member].reward += reward;
+        emit RewardPaid(member, reward);
         return reward;
     }
 
@@ -501,19 +499,19 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function signalTransfer(address _receiver) external nonReentrant {
-        require(stakeRequest[msg.sender].amount == 0, "RiskOffPool: sender has stakeRequest");
-        require(withdrawRequest[msg.sender].amount == 0, "RiskOffPool: sender has withdrawRequest");
+        require(stakeRequest[msg.sender].amount == 0, "Pool: sender has stakeRequest");
+        require(withdrawRequest[msg.sender].amount == 0, "Pool: sender has withdrawRequest");
 
         _validateReceiver(_receiver);
         pendingReceivers[msg.sender] = _receiver;
     }
 
     function acceptTransfer(address _sender) external nonReentrant {
-        require(stakeRequest[_sender].amount == 0, "RiskOffPool: sender has stakeRequest");
-        require(withdrawRequest[_sender].amount == 0, "RiskOffPool: sender has withdrawRequest");
+        require(stakeRequest[_sender].amount == 0, "Pool: sender has stakeRequest");
+        require(withdrawRequest[_sender].amount == 0, "Pool: sender has withdrawRequest");
 
         address receiver = msg.sender;
-        require(pendingReceivers[_sender] == receiver, "RiskOffPool: transfer not signalled");
+        require(pendingReceivers[_sender] == receiver, "Pool: transfer not signalled");
         delete pendingReceivers[_sender];
 
         _validateReceiver(receiver);
