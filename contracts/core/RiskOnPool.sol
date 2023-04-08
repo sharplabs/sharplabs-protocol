@@ -199,7 +199,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     function setGlpFee(uint256 _glpInFee, uint256 _glpOutFee) external onlyTreasury {
         require(_glpInFee >= 0 && _glpInFee <= 10000, "fee: out of range");
         require(_glpOutFee >= 0 && _glpOutFee <= 10000, "fee: out of range");
-        _glpInFee = _glpInFee;
+        glpInFee = _glpInFee;
         glpOutFee = _glpOutFee;
     }
 
