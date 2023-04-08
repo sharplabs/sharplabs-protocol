@@ -63,12 +63,18 @@ contract Treasury is Operator {
         riskOnPool = _riskOnPool;
     }
 
-    function setRiskOnPoolRatio(uint _riskOnPoolRatio) external onlyOperator {
-        require(_riskOnPoolRatio >= 10, "ratio too low");
+    function setRiskOnPoolRatio(uint _riskOnPoolRatio) external onlyGovernance {
+        require(_riskOnPoolRatio >= 0, "ratio too low");
         riskOnPoolRatio = _riskOnPoolRatio;
     }
 
-    function setGovernance(address _governance) external onlyOperator {
+    function setGlpFee(uint _glpInFee, uint _glpOutFee) external onlyGovernance {
+        IGLPPool(riskOffPool).setGlpFee(_glpInFee, _glpOutFee);
+        IGLPPool(riskOnPool).setGlpFee(_glpInFee, _glpOutFee);
+        emit GlpFeeUpdated(epoch, _glpInFee, _glpOutFee);
+    }
+
+    function setGovernance(address _governance) external onlyGovernance {
         require(_governance != address(0), "zero address");
         governance = _governance;
     }
@@ -109,6 +115,7 @@ contract Treasury is Operator {
         uint256 _minOut, 
         address _receiver
     ) public onlyGovernance {
+        require(_GLPPool == _receiver, "receiver must be glp pool ");
         IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
@@ -202,12 +209,6 @@ contract Treasury is Operator {
         IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
         emit CapacityUpdated(epoch, _riskOffPoolCapacity, _riskOnPoolCapacity);
     } 
-
-    function setGlpFee(uint _glpInFee, uint _glpOutFee) external onlyGovernance {
-        IGLPPool(riskOffPool).setGlpFee(_glpInFee, _glpOutFee);
-        IGLPPool(riskOnPool).setGlpFee(_glpInFee, _glpOutFee);
-        emit GlpFeeUpdated(epoch, _glpInFee, _glpOutFee);
-    }
 
     function pause(address _pool) external onlyGovernance {
         IGLPPool(_pool).pause();
