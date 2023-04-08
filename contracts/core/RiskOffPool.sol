@@ -362,10 +362,14 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         uint _glpAmount = amount * 1e42 / getGLPPrice(false);
         uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(share, _glpAmount, 0, address(this));
         require(amountOut <= amount, "withdraw overflow");
+        updateReward(msg.sender);
+        _totalSupply.reward -= members[msg.sender].rewardEarned;
+        members[msg.sender].rewardEarned = 0;
         _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
         _totalSupply.withdrawable += amount;
         _balances[msg.sender].withdrawable += amount;
+        totalWithdrawRequest -= withdrawRequest[msg.sender].amount;
         delete withdrawRequest[msg.sender];
         emit Exit(msg.sender, amount);
     }

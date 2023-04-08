@@ -53,9 +53,8 @@ contract Treasury is Operator {
 
     /* ========== CONFIG ========== */
 
-    function setPeriod(uint _period) external {
+    function setPeriod(uint _period) external onlyGovernance {
         require(_period > 0, "zero period");
-        require(operator() == msg.sender || governance == msg.sender, "period: wrong caller");
         period = _period;
     }
 
