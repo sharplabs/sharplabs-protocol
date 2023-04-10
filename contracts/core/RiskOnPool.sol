@@ -176,11 +176,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         userExitEpochs = _userExitEpochs;
     }
 
-    function setShareToken(address _share) external onlyOperator {
-        require(_share != address(0), "share token can not be zero address");
-        share = _share;
-    }
-
     function setFee(uint256 _fee) external onlyOperator {
         require(_fee >= 0 && _fee <= 10000, "fee: out of range");
         fee = _fee;
@@ -202,7 +197,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         glpInFee = _glpInFee;
         glpOutFee = _glpOutFee;
     }
-
 
     function setRouter(address _glpRouter, address _rewardRouter) external onlyOperator {
         glpRouter = _glpRouter;
