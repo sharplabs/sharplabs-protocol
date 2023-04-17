@@ -7,6 +7,14 @@ import "../utils/access/Operator.sol";
 import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
 
+/**
+ * @dev Sharplabs Treasury Contract. It provides an interface for governance accounts to 
+ * operate the pool contract and also accepts parameters uploaded from off-chain by governance to 
+ * ensure the system runs smoothly. 
+ *
+ * It also provides a pause mechanism to temporarily halt the system's operation 
+ * in case of emergencies (users' on-chain funds are safe).
+ */
 contract Treasury is Operator {
 
     using SafeERC20 for IERC20;
@@ -54,17 +62,18 @@ contract Treasury is Operator {
     /* ========== CONFIG ========== */
 
     function setPeriod(uint _period) external onlyGovernance {
-        require(_period > 0, "zero period");
+        require(_period > 0, "period cannot be zero");
         period = _period;
     }
 
     function setPool(address _riskOffPool, address _riskOnPool) external onlyOperator {
+        require(_riskOffPool != address(0) && _riskOnPool != address(0), "pool address cannot be zero address");
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
     }
 
     function setRiskOnPoolRatio(uint _riskOnPoolRatio) external onlyGovernance {
-        require(_riskOnPoolRatio >= 0, "ratio too low");
+        require(_riskOnPoolRatio > 0, "Ratio cannot be zero");
         riskOnPoolRatio = _riskOnPoolRatio;
     }
 
