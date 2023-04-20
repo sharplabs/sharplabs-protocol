@@ -11,6 +11,12 @@ interface IGLPPool {
         uint256 _minGlp
     ) external;
 
+    function stakeETHByGov(
+        uint256 _amount, 
+        uint256 _minUsdg, 
+        uint256 _minGlp
+    ) external;
+
     function withdrawByGov(
         address _tokenOut, 
         uint256 _glpAmount, 

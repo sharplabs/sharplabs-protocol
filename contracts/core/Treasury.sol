@@ -108,24 +108,33 @@ contract Treasury is Operator {
     }
 
     function buyGLP(
-        address _GLPPool, 
+        address _glpPool, 
         address _token, 
         uint256 _amount, 
         uint256 _minUsdg, 
         uint256 _minGlp
-    ) public onlyGovernance {
-        IGLPPool(_GLPPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
+    ) external onlyGovernance {
+        IGLPPool(_glpPool).stakeByGov(_token, _amount, _minUsdg, _minGlp);
+    }
+
+    function buyGLPWithETH(
+        address _glpPool,
+        uint256 _amount, 
+        uint256 _minUsdg, 
+        uint256 _minGlp
+    ) external onlyGovernance {
+        IGLPPool(_glpPool).stakeETHByGov(_amount, _minUsdg, _minGlp);
     }
 
     function sellGLP(
-        address _GLPPool, 
+        address _glpPool, 
         address _tokenOut, 
         uint256 _glpAmount, 
         uint256 _minOut, 
         address _receiver
-    ) public onlyGovernance {
-        require(_GLPPool == _receiver, "receiver must be glp pool ");
-        IGLPPool(_GLPPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
+    ) external onlyGovernance {
+        require(_glpPool == _receiver, "receiver must be glp pool ");
+        IGLPPool(_glpPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
     // send funds(ERC20 tokens) to pool
