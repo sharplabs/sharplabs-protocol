@@ -143,6 +143,7 @@ contract Treasury is Operator {
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
+    // send funds(ETH) to pool
     function sendPoolFundsETH(address _pool, uint _amount) external onlyGovernance {
         require(_amount <= address(this).balance, "insufficient funds");
         payable(_pool).transfer(_amount);
@@ -167,7 +168,7 @@ contract Treasury is Operator {
         IGLPPool(_pool).treasuryWithdrawFundsETH(_amount, _to);
     }
 
-    // allocate reward at every epoch
+    // allocate rewards
     function allocateReward(address _pool, int256 _amount) external onlyGovernance {
         IGLPPool(_pool).allocateReward(_amount);
     }
@@ -177,24 +178,28 @@ contract Treasury is Operator {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    // withdraw funds from treasury to gov wallet
+    // withdraw funds(ERC20 tokens) from treasury to the gov wallet
     function withdraw(address _token, uint256 amount) external onlyGovernance {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
+    // withdraw funds(ETH) from treasury to the gov wallet
     function withdrawETH(uint256 amount) external onlyGovernance {
         require(amount <= address(this).balance, "insufficient funds");
         payable(msg.sender).transfer(amount);
     }
 
+    // trigger by the governance wallet at the end of each epoch
     function handleStakeRequest(address _pool, address[] memory _address) external onlyGovernance {
         IGLPPool(_pool).handleStakeRequest(_address);
     }
 
+    // trigger by the governance wallet at the end of each epoch
     function handleWithdrawRequest(address _pool, address[] memory _address) external onlyGovernance {
         IGLPPool(_pool).handleWithdrawRequest(_address);
     }
     
+    // handle the glp pool's rewards to reinvest
     function handleRewards(
         address _pool,
         bool _shouldClaimGmx,
@@ -215,6 +220,7 @@ contract Treasury is Operator {
             _shouldConvertWethToEth);
     }
 
+    // trigger by the governance wallet at the end of each epoch
     function updateEpoch() external onlyGovernance {
         require(block.timestamp >= nextEpochPoint(), "Treasury: not opened yet");
         epoch += 1;
@@ -222,16 +228,19 @@ contract Treasury is Operator {
         emit EpochUpdated(epoch, block.timestamp);
     }
 
+    // update capacity of each pool
     function updateCapacity(uint _riskOffPoolCapacity, uint _riskOnPoolCapacity) external onlyGovernance {
         IGLPPool(riskOffPool).setCapacity(_riskOffPoolCapacity);
         IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
         emit CapacityUpdated(epoch, _riskOffPoolCapacity, _riskOnPoolCapacity);
     } 
 
+    // temporarily halt the system's operations
     function pause(address _pool) external onlyGovernance {
         IGLPPool(_pool).pause();
     }
 
+    // recover the system's operations
     function unpause(address _pool) external onlyGovernance {
         IGLPPool(_pool).unpause();
     }
