@@ -17,7 +17,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 10000,
+            runs: 200,
             details: {
               yul: false,
             },
@@ -32,7 +32,7 @@ module.exports = {
   settings: {
     optimizer: {
       enabled: true,
-      runs: 10000,
+      runs: 200,
       details: {
         yul: false,
       },
@@ -46,7 +46,7 @@ module.exports = {
     },
     arbitrum: {
       url: 'https://rpc.ankr.com/arbitrum/ff2b1565758d5846b444d962f5816bbef5015907974abd6bbf539025459cb598',
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: ['0xec274ed4e393b6cdccb40e1bc4af24b3166f5f1e6feca6743d50d2040b71a934'],
     },
   },
   mocha: {

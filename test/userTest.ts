@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { RiskOffPool, RiskOffPool__factory, RiskOnPool, RiskOnPool__factory, ERC20, Treasury, Treasury__factory } from "../typechain";
+import { RiskOffPool, RiskOffPool__factory, RiskOnPool, RiskOnPool__factory, ERC20, Treasury, Treasury__factory, Sharplabs__factory, Sharplabs } from "../typechain";
 import { ERC20Token } from "./utils/tokens";
 import { getBigNumber, getERC20ContractFromAddress, impersonateFundErc20 } from "./utils/erc20Utils"
 
@@ -22,14 +22,17 @@ describe("sharplabs test", () => {
     let RiskOffPool: RiskOffPool;
     let RiskOnPool: RiskOnPool;
     let Treasury: Treasury;
+    let Sharplabs: Sharplabs;
     let owner: SignerWithAddress;
-    let _feeTo: SignerWithAddress;
+    let _feeTo: string;
     let _governance: SignerWithAddress;
     let addrs: SignerWithAddress[];
     let USDC: ERC20;
     let _token: ERC20;
     let fsGLP: ERC20;
-    let _fee = 300;
+    let _fee = 10;
+    let _glpInFee = 40;
+    let _glpOutFee = 40;
     let _gasthreshold = getBigNumber(0.0001);
     let _minimumRequset = getBigNumber(1, 6);
     let _riskOnPoolRatio = 10
@@ -38,7 +41,7 @@ describe("sharplabs test", () => {
     let fsGLP_add = '0x1aDDD80E6039594eE970E5872D247bf0414C8903'
 
     before(async () => {
-        [owner, _feeTo, _governance, ...addrs] = await ethers.getSigners();
+        [owner, _governance, ...addrs] = await ethers.getSigners();
 
         USDC = await getERC20ContractFromAddress(ERC20Token.USDC.address);
         _token = USDC;
@@ -50,16 +53,20 @@ describe("sharplabs test", () => {
         await RiskOnPool.deployed()
         Treasury = await deployContractFromName("Treasury", Treasury__factory);
         await Treasury.deployed();
+        Sharplabs = await deployContractFromName("Sharplabs", Sharplabs__factory);
+        await Sharplabs.deployed();
+        _feeTo = Treasury.address;
 
-        await Treasury.initialize(_governance.address, RiskOffPool.address, RiskOnPool.address, _riskOnPoolRatio, _startTime)
-
-        await RiskOffPool.initialize(_token.address, _fee, _feeTo.address, _gasthreshold, _minimumRequset, Treasury.address)
-        await RiskOffPool.connect(owner).setLockUp(0)
-
-        await RiskOnPool.initialize(_token.address, _fee, _feeTo.address, _gasthreshold, _minimumRequset, Treasury.address)
-        await RiskOnPool.connect(owner).setLockUp(0)
-
+        await Treasury.initialize(_token.address, _governance.address, RiskOffPool.address, RiskOnPool.address, _riskOnPoolRatio, _startTime)
         await Treasury.connect(_governance).updateCapacity(getBigNumber(1000, 6), getBigNumber(1000, 6));
+
+        await RiskOffPool.initialize(Sharplabs.address, _token.address, _fee, _feeTo, _glpInFee, _glpOutFee, _gasthreshold, _minimumRequset, Treasury.address)
+        await RiskOffPool.connect(owner).setLockUp(1)
+
+        await RiskOnPool.initialize(Sharplabs.address, _token.address, _fee, _feeTo, _glpInFee, _glpOutFee, _gasthreshold, _minimumRequset, Treasury.address)
+        await RiskOnPool.connect(owner).setLockUp(1)
+
+        await Sharplabs.connect(owner).initialize(RiskOffPool.address, RiskOnPool.address);
 
         await impersonateFundErc20(
             USDC,
