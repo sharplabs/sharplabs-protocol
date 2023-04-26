@@ -5,6 +5,7 @@ import { ethers } from "hardhat";
 import { RiskOffPool, RiskOffPool__factory, RiskOnPool, RiskOnPool__factory, ERC20, Treasury, Treasury__factory, Sharplabs__factory, Sharplabs } from "../typechain";
 import { ERC20Token } from "./utils/tokens";
 import { getBigNumber, getERC20ContractFromAddress, impersonateFundErc20 } from "./utils/erc20Utils"
+import { BigNumber } from "ethers";
 
 export const deployContractFromName = async (
     contractName: string,
@@ -50,23 +51,24 @@ describe("sharplabs test", () => {
         RiskOffPool = await deployContractFromName("RiskOffPool", RiskOffPool__factory);
         await RiskOffPool.deployed();
         RiskOnPool = await deployContractFromName("RiskOnPool", RiskOnPool__factory);
-        await RiskOnPool.deployed()
+        await RiskOnPool.deployed();
         Treasury = await deployContractFromName("Treasury", Treasury__factory);
         await Treasury.deployed();
         Sharplabs = await deployContractFromName("Sharplabs", Sharplabs__factory);
         await Sharplabs.deployed();
         _feeTo = Treasury.address;
 
-        await Treasury.initialize(_token.address, _governance.address, RiskOffPool.address, RiskOnPool.address, _riskOnPoolRatio, _startTime)
-        await Treasury.connect(_governance).updateCapacity(getBigNumber(1000, 6), getBigNumber(1000, 6));
+        await Treasury.initialize(_token.address, _governance.address, RiskOffPool.address, RiskOnPool.address, _riskOnPoolRatio, _startTime);
 
         await RiskOffPool.initialize(Sharplabs.address, _token.address, _fee, _feeTo, _glpInFee, _glpOutFee, _gasthreshold, _minimumRequset, Treasury.address)
-        await RiskOffPool.connect(owner).setLockUp(1)
+        await RiskOffPool.setLockUp(0)
 
         await RiskOnPool.initialize(Sharplabs.address, _token.address, _fee, _feeTo, _glpInFee, _glpOutFee, _gasthreshold, _minimumRequset, Treasury.address)
-        await RiskOnPool.connect(owner).setLockUp(1)
+        await RiskOnPool.setLockUp(0)
 
-        await Sharplabs.connect(owner).initialize(RiskOffPool.address, RiskOnPool.address);
+        await Treasury.connect(_governance).updateCapacity(getBigNumber(1000, 6), getBigNumber(1000, 6));
+
+        await Sharplabs.initialize(RiskOffPool.address, RiskOnPool.address);
 
         await impersonateFundErc20(
             USDC,
@@ -111,7 +113,7 @@ describe("sharplabs test", () => {
             let requests = await _pool.stakeRequest(owner.address)
             let eth_balance = await ethers.provider.getBalance(_pool.address)
             let stakeAmount = getBigNumber(100, 6)
-            let feeAmount = getBigNumber(1)
+            let stakeAmountTaxed = stakeAmount.mul(10000 - _fee).div(10000).mul(10000 - _glpInFee).div(10000)
             // console.info("user_wallet_balance", user_wallet_balance)
             // console.info("user_balance_wait", user_balance_wait)
             // console.info("total_supply_staked", total_supply_staked)
@@ -122,18 +124,16 @@ describe("sharplabs test", () => {
             // console.info('user approve...')
             await USDC.approve(_pool.address, ethers.constants.MaxInt256)
             // console.info('user stake...')
-            let out = await _pool.stake(stakeAmount, { value: feeAmount})
+            let out = await _pool.stake(stakeAmount, { value: _gasthreshold})
             // console.info(out)
 
             expect(user_wallet_balance.sub(stakeAmount)).to.equal(await USDC.balanceOf(owner.address))
-            expect(user_balance_wait.add(stakeAmount)).to.equal(await _pool.balance_wait(owner.address))
+            expect(user_balance_wait.add(stakeAmountTaxed)).to.equal(await _pool.balance_wait(owner.address))
             expect(total_supply_staked).to.equal( await _pool.total_supply_staked())
-            expect(total_supply_wait.add(stakeAmount)).to.equal(await _pool.total_supply_wait())
-            expect(eth_balance.add(feeAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
-            expect(requests.amount.add(stakeAmount)).to.equal((await _pool.stakeRequest(owner.address)).amount)
-            expect(requests.requestTimestamp).to.lt((await _pool.stakeRequest(owner.address)).requestTimestamp)
-            // if epoch = 0 and disn't stake in this epoch, after stake, the requestEpoch will be the current epoch (0)
-            expect(requests.requestEpoch).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
+            expect(total_supply_wait.add(stakeAmountTaxed)).to.equal(await _pool.total_supply_wait())
+            expect(eth_balance.add(_gasthreshold)).to.equal(await ethers.provider.getBalance(_pool.address))
+            expect(requests.amount.add(stakeAmountTaxed)).to.equal((await _pool.stakeRequest(owner.address)).amount)
+            expect((await Treasury.epoch()).toBigInt()).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
 
             user_wallet_balance = await USDC.balanceOf(owner.address)
             user_balance_wait = await _pool.balance_wait(owner.address)
@@ -150,20 +150,17 @@ describe("sharplabs test", () => {
             // console.info("fee to's eth_balance", eth_balance)
 
             // console.info('user stake...')
-            stakeAmount = getBigNumber(100, 6)
-            feeAmount = getBigNumber(0.01)
+            stakeAmount = getBigNumber(100, 6);
 
-            await _pool.stake(stakeAmount, { value: feeAmount })
+            await _pool.stake(stakeAmount, { value: _gasthreshold })
 
             expect(user_wallet_balance.sub(stakeAmount)).to.equal(await USDC.balanceOf(owner.address))
-            expect(user_balance_wait.add(stakeAmount)).to.equal(await _pool.balance_wait(owner.address))
+            expect(user_balance_wait.add(stakeAmountTaxed)).to.equal(await _pool.balance_wait(owner.address))
             expect(total_supply_staked).to.equal( await _pool.total_supply_staked())
-            expect(total_supply_wait.add(stakeAmount)).to.equal(await _pool.total_supply_wait())
-            expect(eth_balance.add(feeAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
-            expect(requests.amount.add(stakeAmount)).to.equal((await _pool.stakeRequest(owner.address)).amount)
-            expect(requests.requestTimestamp).to.lt((await _pool.stakeRequest(owner.address)).requestTimestamp)
-            // if epoch = 0 and disn't stake in this epoch, after stake, the requestEpoch will be the same (0)
-            expect(requests.requestEpoch).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
+            expect(total_supply_wait.add(stakeAmountTaxed)).to.equal(await _pool.total_supply_wait())
+            expect(eth_balance.add(_gasthreshold)).to.equal(await ethers.provider.getBalance(_pool.address))
+            expect(requests.amount.add(stakeAmountTaxed)).to.equal((await _pool.stakeRequest(owner.address)).amount)
+            expect((await Treasury.epoch()).toBigInt()).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
 
             // console.info('user stake after info:')
 
@@ -283,14 +280,14 @@ describe("sharplabs test", () => {
             let contract_eth_balance = await ethers.provider.getBalance(_pool.address)
             let depositAmount = getBigNumber(100, 6)
             
-            let out = await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, depositAmount)
+            let out = await Treasury.connect(_governance).sendPoolFundsETH(_pool.address, depositAmount)
 
             expect(contract_eth_balance.add(depositAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
             expect(treasury_eth_balance.sub(depositAmount)).to.equal(await ethers.provider.getBalance(Treasury.address))
             // _governance would use the gas
             // expect(_governance_eth_balance).to.equal(await ethers.provider.getBalance(_governance.address))
 
-            await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, 0)
+            await Treasury.connect(_governance).sendPoolFundsETH(_pool.address, 0)
             // await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, getBigNumber(9999))
         })
 
@@ -355,8 +352,9 @@ describe("sharplabs test", () => {
 
             // console.info('updateEpoch ...')
             await Treasury.connect(_governance).updateEpoch()
+            await Treasury.connect(_governance).updateEpoch()
 
-            expect(epoch.add(1)).to.equal(await Treasury.epoch())
+            expect(epoch.add(2)).to.equal(await Treasury.epoch())
         })
 
 
@@ -402,28 +400,6 @@ describe("sharplabs test", () => {
             expect(epoch.add(1)).to.equal(await Treasury.epoch())
         })
 
-        it("handle withdraw request", async () => {
-
-            let user_wallet_balance = await USDC.balanceOf(owner.address)
-            let requests = await _pool.withdrawRequest(owner.address)
-            let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
-            // console.info("before handle withdraw request:")
-            // console.info("user_wallet_balance", user_wallet_balance)
-            // console.info("requests", requests)
-            // console.info("handle withdraw request ...")
-            let out = await Treasury.connect(_governance).handleWithdrawRequest(_pool.address, [owner.address])
-            // console.info(out)
-            expect(user_wallet_balance).to.equal(await USDC.balanceOf(owner.address))
-            expect(0).to.equal((await _pool.withdrawRequest(owner.address)).amount)
-            expect(user_balance_withdraw.add(requests.amount)).to.equal(await _pool.balance_withdraw(owner.address))
-            
-            // console.info("after handle withdraw request:")
-            // user_wallet_balance = await USDC.balanceOf(owner.address)
-            // requests = await _pool.withdrawRequest(owner.address)
-            // console.info("user_wallet_balance", user_wallet_balance)
-            // console.info("requests", requests)
-        })
-
         it("gov allocateReward", async () => {
 
             console.info("before allocateReward")
@@ -438,13 +414,35 @@ describe("sharplabs test", () => {
             console.info("user earned", earned)
         })
 
+        it("handle withdraw request", async () => {
+
+            let user_wallet_balance = await USDC.balanceOf(owner.address)
+            let requests = await _pool.withdrawRequest(owner.address)
+            let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
+            let realWithdrawAmount = requests.amount.mul(10000 - _glpOutFee).div(10000)
+            // console.info("before handle withdraw request:")
+            // console.info("user_wallet_balance", user_wallet_balance)
+            // console.info("requests", requests)
+            // console.info("handle withdraw request ...")
+            let out = await Treasury.connect(_governance).handleWithdrawRequest(_pool.address, [owner.address])
+            // console.info(out)
+            expect(user_wallet_balance).to.equal(await USDC.balanceOf(owner.address))
+            expect(0).to.equal((await _pool.withdrawRequest(owner.address)).amount)
+            expect(user_balance_withdraw.add(realWithdrawAmount)).to.equal(await _pool.balance_withdraw(owner.address))
+            
+            // console.info("after handle withdraw request:")
+            // user_wallet_balance = await USDC.balanceOf(owner.address)
+            // requests = await _pool.withdrawRequest(owner.address)
+            // console.info("user_wallet_balance", user_wallet_balance)
+            // console.info("requests", requests)
+        });
 
         it("user withdraw", async () => {
 
             let user_wallet_balance = await USDC.balanceOf(owner.address)
             let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
-            let fee_balance = await USDC.balanceOf(_feeTo.address)
             let withdrawAmount = getBigNumber(40, 6)
+            let user_balance_reward = await _pool.balance_reward(owner.address)
             // console.info("before user withdraw:")
             // console.info("user_wallet_balance", user_wallet_balance)
             // console.info("user_balance_withdraw", user_balance_withdraw)
@@ -452,10 +450,10 @@ describe("sharplabs test", () => {
             
             let out = await _pool.withdraw(withdrawAmount)
             // console.info(out)
-            
-            expect(user_wallet_balance.add(withdrawAmount.mul(10000-_fee).div(10000))).to.equal(await USDC.balanceOf(owner.address))
+
+            expect(user_wallet_balance.add(withdrawAmount).add(user_balance_reward)).to.equal(await USDC.balanceOf(owner.address))
+            expect(await _pool.balance_reward(owner.address)).to.equal(0)
             expect(user_balance_withdraw.sub(withdrawAmount)).to.equal(await _pool.balance_withdraw(owner.address))
-            expect(fee_balance.add(withdrawAmount.mul(_fee).div(10000))).to.equal(await USDC.balanceOf(_feeTo.address))
         })
     });
 
@@ -474,7 +472,7 @@ describe("sharplabs test", () => {
             let requests = await _pool.stakeRequest(owner.address)
             let eth_balance = await ethers.provider.getBalance(_pool.address)
             let stakeAmount = getBigNumber(100, 6)
-            let feeAmount = getBigNumber(1)
+            let stakeAmountTaxed = stakeAmount.mul(10000 - _fee).div(10000).mul(10000 - _glpInFee).div(10000)
             // console.info("user_wallet_balance", user_wallet_balance)
             // console.info("user_balance_wait", user_balance_wait)
             // console.info("total_supply_staked", total_supply_staked)
@@ -485,18 +483,16 @@ describe("sharplabs test", () => {
             // console.info('user approve...')
             await USDC.approve(_pool.address, ethers.constants.MaxInt256)
             // console.info('user stake...')
-            let out = await _pool.stake(stakeAmount, { value: feeAmount})
+            let out = await _pool.stake(stakeAmount, { value: _gasthreshold})
             // console.info(out)
 
             expect(user_wallet_balance.sub(stakeAmount)).to.equal(await USDC.balanceOf(owner.address))
-            expect(user_balance_wait.add(stakeAmount)).to.equal(await _pool.balance_wait(owner.address))
+            expect(user_balance_wait.add(stakeAmountTaxed)).to.equal(await _pool.balance_wait(owner.address))
             expect(total_supply_staked).to.equal( await _pool.total_supply_staked())
-            expect(total_supply_wait.add(stakeAmount)).to.equal(await _pool.total_supply_wait())
-            expect(eth_balance.add(feeAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
-            expect(requests.amount.add(stakeAmount)).to.equal((await _pool.stakeRequest(owner.address)).amount)
-            expect(requests.requestTimestamp).to.lt((await _pool.stakeRequest(owner.address)).requestTimestamp)
-            // if epoch != 0 and disn't stake in this epoch, after stake, the requestEpoch will be the current epoch
-            // expect(requests.requestEpoch).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
+            expect(total_supply_wait.add(stakeAmountTaxed)).to.equal(await _pool.total_supply_wait())
+            expect(eth_balance.add(_gasthreshold)).to.equal(await ethers.provider.getBalance(_pool.address))
+            expect(requests.amount.add(stakeAmountTaxed)).to.equal((await _pool.stakeRequest(owner.address)).amount)
+            expect((await Treasury.epoch()).toBigInt()).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
 
             user_wallet_balance = await USDC.balanceOf(owner.address)
             user_balance_wait = await _pool.balance_wait(owner.address)
@@ -514,19 +510,16 @@ describe("sharplabs test", () => {
 
             // console.info('user stake...')
             stakeAmount = getBigNumber(100, 6)
-            feeAmount = getBigNumber(0.01)
 
-            await _pool.stake(stakeAmount, { value: feeAmount })
+            await _pool.stake(stakeAmount, { value: _gasthreshold })
 
             expect(user_wallet_balance.sub(stakeAmount)).to.equal(await USDC.balanceOf(owner.address))
-            expect(user_balance_wait.add(stakeAmount)).to.equal(await _pool.balance_wait(owner.address))
+            expect(user_balance_wait.add(stakeAmountTaxed)).to.equal(await _pool.balance_wait(owner.address))
             expect(total_supply_staked).to.equal( await _pool.total_supply_staked())
-            expect(total_supply_wait.add(stakeAmount)).to.equal(await _pool.total_supply_wait())
-            expect(eth_balance.add(feeAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
-            expect(requests.amount.add(stakeAmount)).to.equal((await _pool.stakeRequest(owner.address)).amount)
-            expect(requests.requestTimestamp).to.lt((await _pool.stakeRequest(owner.address)).requestTimestamp)
-            // if epoch != 0 and had stake in this epoch, after stake, the requestEpoch will not change
-            expect(requests.requestEpoch).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
+            expect(total_supply_wait.add(stakeAmountTaxed)).to.equal(await _pool.total_supply_wait())
+            expect(eth_balance.add(_gasthreshold)).to.equal(await ethers.provider.getBalance(_pool.address))
+            expect(requests.amount.add(stakeAmountTaxed)).to.equal((await _pool.stakeRequest(owner.address)).amount)
+            expect((await Treasury.epoch()).toBigInt()).to.equal((await _pool.stakeRequest(owner.address)).requestEpoch)
 
             // console.info('user stake after info:')
 
@@ -646,14 +639,14 @@ describe("sharplabs test", () => {
             let contract_eth_balance = await ethers.provider.getBalance(_pool.address)
             let depositAmount = getBigNumber(100, 6)
             
-            let out = await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, depositAmount)
+            let out = await Treasury.connect(_governance).sendPoolFundsETH(_pool.address, depositAmount)
 
             expect(contract_eth_balance.add(depositAmount)).to.equal(await ethers.provider.getBalance(_pool.address))
             expect(treasury_eth_balance.sub(depositAmount)).to.equal(await ethers.provider.getBalance(Treasury.address))
             // _governance would use the gas
             // expect(_governance_eth_balance).to.equal(await ethers.provider.getBalance(_governance.address))
 
-            await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, 0)
+            await Treasury.connect(_governance).sendPoolFundsETH(_pool.address, 0)
             // await Treasury.connect(_governance).sendPoolFundsEth(_pool.address, getBigNumber(9999))
         })
 
@@ -718,8 +711,9 @@ describe("sharplabs test", () => {
 
             // console.info('updateEpoch ...')
             await Treasury.connect(_governance).updateEpoch()
+            await Treasury.connect(_governance).updateEpoch()
 
-            expect(epoch.add(1)).to.equal(await Treasury.epoch())
+            expect(epoch.add(2)).to.equal(await Treasury.epoch())
         })
 
 
@@ -765,28 +759,6 @@ describe("sharplabs test", () => {
             expect(epoch.add(1)).to.equal(await Treasury.epoch())
         })
 
-        it("handle withdraw request", async () => {
-
-            let user_wallet_balance = await USDC.balanceOf(owner.address)
-            let requests = await _pool.withdrawRequest(owner.address)
-            let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
-            // console.info("before handle withdraw request:")
-            // console.info("user_wallet_balance", user_wallet_balance)
-            // console.info("requests", requests)
-            // console.info("handle withdraw request ...")
-            let out = await Treasury.connect(_governance).handleWithdrawRequest(_pool.address, [owner.address])
-            // console.info(out)
-            expect(user_wallet_balance).to.equal(await USDC.balanceOf(owner.address))
-            expect(0).to.equal((await _pool.withdrawRequest(owner.address)).amount)
-            expect(user_balance_withdraw.add(requests.amount)).to.equal(await _pool.balance_withdraw(owner.address))
-            
-            // console.info("after handle withdraw request:")
-            // user_wallet_balance = await USDC.balanceOf(owner.address)
-            // requests = await _pool.withdrawRequest(owner.address)
-            // console.info("user_wallet_balance", user_wallet_balance)
-            // console.info("requests", requests)
-        })
-
         it("gov allocateReward", async () => {
 
             console.info("before allocateReward")
@@ -801,13 +773,35 @@ describe("sharplabs test", () => {
             console.info("user earned", earned)
         })
 
+        it("handle withdraw request", async () => {
+
+            let user_wallet_balance = await USDC.balanceOf(owner.address)
+            let requests = await _pool.withdrawRequest(owner.address)
+            let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
+            let realWithdrawAmount = requests.amount.mul(10000 - _glpOutFee).div(10000)
+            // console.info("before handle withdraw request:")
+            // console.info("user_wallet_balance", user_wallet_balance)
+            // console.info("requests", requests)
+            // console.info("handle withdraw request ...")
+            let out = await Treasury.connect(_governance).handleWithdrawRequest(_pool.address, [owner.address])
+            // console.info(out)
+            expect(user_wallet_balance).to.equal(await USDC.balanceOf(owner.address))
+            expect(0).to.equal((await _pool.withdrawRequest(owner.address)).amount)
+            expect(user_balance_withdraw.add(realWithdrawAmount)).to.equal(await _pool.balance_withdraw(owner.address))
+            
+            // console.info("after handle withdraw request:")
+            // user_wallet_balance = await USDC.balanceOf(owner.address)
+            // requests = await _pool.withdrawRequest(owner.address)
+            // console.info("user_wallet_balance", user_wallet_balance)
+            // console.info("requests", requests)
+        })
 
         it("user withdraw", async () => {
 
             let user_wallet_balance = await USDC.balanceOf(owner.address)
             let user_balance_withdraw = await _pool.balance_withdraw(owner.address)
-            let fee_balance = await USDC.balanceOf(_feeTo.address)
             let withdrawAmount = getBigNumber(40, 6)
+            let user_balance_reward = await _pool.balance_reward(owner.address)
             // console.info("before user withdraw:")
             // console.info("user_wallet_balance", user_wallet_balance)
             // console.info("user_balance_withdraw", user_balance_withdraw)
@@ -815,11 +809,10 @@ describe("sharplabs test", () => {
             
             let out = await _pool.withdraw(withdrawAmount)
             // console.info(out)
-            
-            expect(user_wallet_balance.add(withdrawAmount.mul(10000-_fee).div(10000))).to.equal(await USDC.balanceOf(owner.address))
-            expect(user_balance_withdraw.sub(withdrawAmount)).to.equal(await _pool.balance_withdraw(owner.address))
-            expect(fee_balance.add(withdrawAmount.mul(_fee).div(10000))).to.equal(await USDC.balanceOf(_feeTo.address))
-        })
-    });
 
+            expect(user_wallet_balance.add(withdrawAmount).add(user_balance_reward)).to.equal(await USDC.balanceOf(owner.address))
+            expect(await _pool.balance_reward(owner.address)).to.equal(0)
+            expect(user_balance_withdraw.sub(withdrawAmount)).to.equal(await _pool.balance_withdraw(owner.address))
+        })
+    })
 })

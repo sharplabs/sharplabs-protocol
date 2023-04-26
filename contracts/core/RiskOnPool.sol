@@ -167,7 +167,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function setLockUp(uint256 _withdrawLockupEpochs) external onlyOperator {
-        require(_withdrawLockupEpochs > 0, "withdrawLockupEpochs must be greater than zero");
+        require(_withdrawLockupEpochs >= 0, "withdrawLockupEpochs must be greater than or equal to zero");
         withdrawLockupEpochs = _withdrawLockupEpochs;
     }
 
