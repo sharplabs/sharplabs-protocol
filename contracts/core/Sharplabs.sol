@@ -30,6 +30,8 @@ contract Sharplabs is ERC20, Operator {
     }
 
     function initialize(address _riskOffPool, address _riskOnPool) public notInitialized {
+        require(_riskOffPool != address(0), "riskOffPool address can not be zero address");
+        require(_riskOnPool != address(0), "riskOnPool address can not be zero address");
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
         initialized = true;

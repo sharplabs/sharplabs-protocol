@@ -17,6 +17,7 @@ import "../utils/token/SafeERC20.sol";
  */
 contract Treasury is Operator {
 
+    using Address for address;
     using SafeERC20 for IERC20;
 
     address public share;
@@ -35,8 +36,6 @@ contract Treasury is Operator {
 
     event Initialized(address indexed executor, uint256 at);
     event EpochUpdated(uint256 indexed atEpoch, uint256 timestamp);
-    event CapacityUpdated(uint256 indexed atEpoch, uint256 _riskOffPoolCapacity, uint256 _riskOnPoolCapacity);
-    event GlpFeeUpdated(uint256 indexed atEpoch, uint256 _glpInFee, uint256 _glpOutFee);
 
     modifier onlyGovernance() {
         require(governance == msg.sender, "caller is not the governance");
@@ -80,7 +79,6 @@ contract Treasury is Operator {
     function setGlpFee(uint _glpInFee, uint _glpOutFee) external onlyGovernance {
         IGLPPool(riskOffPool).setGlpFee(_glpInFee, _glpOutFee);
         IGLPPool(riskOnPool).setGlpFee(_glpInFee, _glpOutFee);
-        emit GlpFeeUpdated(epoch, _glpInFee, _glpOutFee);
     }
 
     function setGovernance(address _governance) external onlyGovernance {
@@ -96,7 +94,11 @@ contract Treasury is Operator {
         uint256 _riskOnPoolRatio,
         uint256 _startTime
     ) public notInitialized {
-        share =_share;
+        require(_share != address(0), "share address can not be zero address");
+        require(_governance != address(0), "governance address can not be zero address");
+        require(_riskOffPool != address(0), "riskOffPool address can not be zero address");
+        require(_riskOnPool != address(0), "riskOnPool address can not be zero address");
+        share = _share;
         governance = _governance;
         riskOffPool = _riskOffPool;
         riskOnPool = _riskOnPool;
@@ -139,14 +141,16 @@ contract Treasury is Operator {
 
     // send funds(ERC20 tokens) to pool
     function sendPoolFunds(address _pool, address _token, uint _amount) external onlyGovernance {
+        require(_pool != address(0), "pool address can not be zero address");
         require(_amount <= IERC20(_token).balanceOf(address(this)), "insufficient funds");
         IERC20(_token).safeTransfer(_pool, _amount);
     }
 
     // send funds(ETH) to pool
     function sendPoolFundsETH(address _pool, uint _amount) external onlyGovernance {
+        require(_pool != address(0), "pool address can not be zero address");
         require(_amount <= address(this).balance, "insufficient funds");
-        payable(_pool).transfer(_amount);
+        Address.sendValue(payable(_pool), _amount);
     }
 
     // withdraw pool funds(ERC20 tokens) to specified address
@@ -199,6 +203,10 @@ contract Treasury is Operator {
         IGLPPool(_pool).handleWithdrawRequest(_address);
     }
     
+    function removeWithdrawRequest(address _pool, address[] memory _address) external onlyGovernance {
+        IGLPPool(_pool).removeWithdrawRequest(_address);
+    }
+
     // handle the glp pool's rewards to reinvest
     function handleRewards(
         address _pool,
@@ -232,7 +240,6 @@ contract Treasury is Operator {
     function updateCapacity(uint _riskOffPoolCapacity, uint _riskOnPoolCapacity) external onlyGovernance {
         IGLPPool(riskOffPool).setCapacity(_riskOffPoolCapacity);
         IGLPPool(riskOnPool).setCapacity(_riskOnPoolCapacity);
-        emit CapacityUpdated(epoch, _riskOffPoolCapacity, _riskOnPoolCapacity);
     } 
 
     // temporarily halt the system's operations

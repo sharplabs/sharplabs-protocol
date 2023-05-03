@@ -40,6 +40,8 @@ interface IGLPPool {
 
     function handleWithdrawRequest(address[] memory _address) external;
 
+    function removeWithdrawRequest(address[] memory _address) external;
+
     function allocateReward(int256 _amount) external;
 
     function setGlpFee(uint256 _glpInFee, uint256 _glpOutFee) external;

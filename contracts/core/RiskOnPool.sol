@@ -5,16 +5,22 @@ pragma solidity 0.8.13;
 import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
 import "../utils/token/ISharplabs.sol";
+
 import "../utils/security/ContractGuard.sol";
 import "../utils/security/ReentrancyGuard.sol";
+
 import "../utils/access/Operator.sol";
 import "../utils/access/Blacklistable.sol";
 import "../utils/security/Pausable.sol";
+
 import "../utils/interfaces/IGLPRouter.sol";
 import "../utils/interfaces/ITreasury.sol";
 import "../utils/interfaces/IRewardTracker.sol";
 import "../utils/interfaces/IGlpManager.sol";
+
 import "../utils/math/Abs.sol";
+import "../utils/math/SafeCast.sol";
+
 import "./ShareWrapper.sol";
 
 contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, Blacklistable, Pausable {
@@ -22,6 +28,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     using SafeERC20 for IERC20;
     using Address for address;
     using Abs for int256;
+    using SafeCast for uint256;
 
     /* ========== DATA STRUCTURES ========== */
 
@@ -81,7 +88,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     address public rewardRouter = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
     address public glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
-    address public RewardTracker = 0x1aDDD80E6039594eE970E5872D247bf0414C8903;
+    address public rewardTracker = 0x1aDDD80E6039594eE970E5872D247bf0414C8903;
 
     /* ========== EVENTS ========== */
 
@@ -101,7 +108,18 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     event HandledStakeRequest(uint256 indexed atEpoch, address[] _address);
     event HandledWithdrawRequest(uint256 indexed atEpoch, address[] _address);
     event HandledReward(uint256 indexed atEpoch, uint256 time);
-
+    event CapacityUpdated(uint256 indexed atEpoch, uint256 _capacity);
+    event GlpFeeUpdated(uint256 indexed atEpoch, uint256 _glpInFee, uint256 _glpOutFee);
+    event WithdrawLockupEpochsUpdated(uint256 indexed atEpoch, uint256 _withdrawLockupEpochs);
+    event UserExitEpochsUpdated(uint256 indexed atEpoch, uint256 _userExitEpochs);
+    event FeeUpdated(uint256 indexed atEpoch, uint256 _fee);
+    event FeeToUpdated(uint256 indexed atEpoch, address _feeTo);
+    event RouterUpdated(uint256 indexed atEpoch, address _glpRouter, address _rewardRouter);
+    event GlpManagerUpdated(uint256 indexed atEpoch, address _glpManager);
+    event RewardTrackerUpdated(uint256 indexed atEpoch, address _rewardTracker);
+    event TreasuryUpdated(uint256 indexed atEpoch, address _treasury);
+    event GasthresholdUpdated(uint256 indexed atEpoch, uint256 _gasthreshold);
+    event MinimumRequestUpdated(uint256 indexed atEpoch, uint256 _minimumRequest);
 
     /* ========== Modifiers =============== */
 
@@ -135,6 +153,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         uint256 _minimumRequset,
         address _treasury
     ) public notInitialized {
+        require(_token != address(0), "token address can not be zero address");
+        require(_share != address(0), "share address can not be zero address");
+        require(_feeTo != address(0), "feeTo address can not be zero address");
+        require(_treasury != address(0), "treasury address can not be zero address");
+
         token = _token;
         share = _share;
         fee = _fee;
@@ -167,62 +190,75 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function setLockUp(uint256 _withdrawLockupEpochs) external onlyOperator {
-        require(_withdrawLockupEpochs >= 0, "withdrawLockupEpochs must be greater than or equal to zero");
         withdrawLockupEpochs = _withdrawLockupEpochs;
+        emit WithdrawLockupEpochsUpdated(epoch(), _withdrawLockupEpochs);
     }
 
     function setExitEpochs(uint256 _userExitEpochs) external onlyOperator {
         require(_userExitEpochs > 0, "userExitEpochs must be greater than zero");
         userExitEpochs = _userExitEpochs;
+        emit UserExitEpochsUpdated(epoch(), _userExitEpochs);
     }
 
     function setFee(uint256 _fee) external onlyOperator {
-        require(_fee >= 0 && _fee <= 10000, "fee: out of range");
+        require(_fee <= 500, "fee: out of range");
         fee = _fee;
+        emit FeeUpdated(epoch(), _fee);
     }
 
     function setFeeTo(address _feeTo) external onlyOperator {
         require(_feeTo != address(0), "feeTo can not be zero address");
         feeTo = _feeTo;
+        emit FeeToUpdated(epoch(), _feeTo);
     }
 
     function setCapacity(uint256 _capacity) external onlyTreasury {
-        require(_capacity >= 0, "capacity must be greater than or equal to 0");
         capacity = _capacity;
+        emit CapacityUpdated(epoch(), _capacity);
     }
 
     function setGlpFee(uint256 _glpInFee, uint256 _glpOutFee) external onlyTreasury {
-        require(_glpInFee >= 0 && _glpInFee <= 10000, "fee: out of range");
-        require(_glpOutFee >= 0 && _glpOutFee <= 10000, "fee: out of range");
+        require(_glpInFee <= 500, "glpInFee: out of range");
+        require(_glpOutFee <= 500, "glpOutFee: out of range");
         glpInFee = _glpInFee;
         glpOutFee = _glpOutFee;
+        emit GlpFeeUpdated(epoch(), _glpInFee, _glpOutFee);
     }
 
     function setRouter(address _glpRouter, address _rewardRouter) external onlyOperator {
+        require(_glpRouter != address(0), "glpRouter address can not be zero address");
+        require(_rewardRouter != address(0), "rewardRouter address can not be zero address");
         glpRouter = _glpRouter;
         rewardRouter = _rewardRouter;
+        emit RouterUpdated(epoch(), _glpRouter, _rewardRouter);
     }
 
     function setGlpManager(address _glpManager) external onlyOperator {
+        require(_glpManager != address(0), "glpManager address can not be zero address");
         glpManager = _glpManager;
+        emit GlpManagerUpdated(epoch(), _glpManager);
     }
 
-    function setRewardTracker(address _RewardTracker) external onlyOperator {
-        RewardTracker = _RewardTracker;
+    function setRewardTracker(address _rewardTracker) external onlyOperator {
+        require(_rewardTracker != address(0), "rewardTracker address can not be zero address");
+        rewardTracker = _rewardTracker;
+        emit RewardTrackerUpdated(epoch(), _rewardTracker);
     }
 
     function setTreasury(address _treasury) external onlyOperator {
+        require(_treasury != address(0), "treasury address can not be zero address");
         treasury = _treasury;
+        emit TreasuryUpdated(epoch(), _treasury);
     }
 
     function setGasThreshold(uint256 _gasthreshold) external onlyOperator {
-        require(_gasthreshold >= 0, "gasthreshold below zero");
         gasthreshold = _gasthreshold;
+        emit GasthresholdUpdated(epoch(), _gasthreshold);
     }    
 
     function setMinimumRequest(uint256 _minimumRequest) external onlyOperator {
-        require(_minimumRequest >= 0, "minimumRequest below zero");
         minimumRequest = _minimumRequest;
+        emit MinimumRequestUpdated(epoch(), _minimumRequest);
     }   
 
     /* ========== VIEW FUNCTIONS ========== */
@@ -267,7 +303,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         int256 latestRPS = getLatestSnapshot().rewardPerShare;
         int256 storedRPS = getLastSnapshotOf(member).rewardPerShare;
 
-        return int(balance_staked(member)) * (latestRPS - storedRPS) / 1e18 + members[member].rewardEarned;
+        return balance_staked(member).toInt256() * (latestRPS - storedRPS) / 1e18 + members[member].rewardEarned;
     }
 
     // required usd collateral in the contract
@@ -286,7 +322,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     // staked glp amount
     function getStakedGLP() public view returns (uint256) {
-        return IRewardTracker(RewardTracker).balanceOf(address(this));
+        return IRewardTracker(rewardTracker).balanceOf(address(this));
     }
 
     // staked glp usd value
@@ -319,7 +355,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function withdraw_request(uint256 _amount) external payable notBlacklisted(msg.sender) whenNotPaused {
-        require(_amount >= minimumRequest, "withdraw amount too low");
         require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount out of range");
         require(members[msg.sender].epochTimerStart + withdrawLockupEpochs <= epoch(), "still in withdraw lockup");
         require(msg.value >= gasthreshold, "need more gas to handle request");
@@ -447,22 +482,25 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         return reward;
     }
 
-    function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) external onlyTreasury {
+    function stakeByGov(address _token, uint256 _amount, uint256 _minUsdg, uint256 _minGlp) external onlyTreasury returns (uint256) {
         IERC20(_token).safeApprove(glpManager, 0);
         IERC20(_token).safeApprove(glpManager, _amount);
-        IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
+        uint256 glpAmount = IGLPRouter(glpRouter).mintAndStakeGlp(_token, _amount, _minUsdg, _minGlp);
         emit StakedByGov(epoch(), _amount, block.timestamp);
+        return glpAmount;
     }
 
-    function stakeETHByGov(uint256 amount, uint256 _minUsdg, uint256 _minGlp) external onlyTreasury {
+    function stakeETHByGov(uint256 amount, uint256 _minUsdg, uint256 _minGlp) external onlyTreasury returns (uint256) {
         require(amount <= address(this).balance, "not enough funds");
-        IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
+        uint256 glpAmount = IGLPRouter(glpRouter).mintAndStakeGlpETH{value: amount}(_minUsdg, _minGlp);
         emit StakedETHByGov(epoch(), amount, block.timestamp);
+        return glpAmount;
     }
 
-    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyTreasury {
-        IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
+    function withdrawByGov(address _tokenOut, uint256 _glpAmount, uint256 _minOut, address _receiver) external onlyTreasury returns (uint256) {
+        uint256 glpAmount = IGLPRouter(glpRouter).unstakeAndRedeemGlp(_tokenOut, _glpAmount, _minOut, _receiver);
         emit WithdrawnByGov(epoch(), _minOut, block.timestamp);
+        return glpAmount;
     }
 
     function handleRewards(
@@ -491,7 +529,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
         // Create & add new snapshot
         int256 prevRPS = getLatestSnapshot().rewardPerShare;
-        int256 nextRPS = prevRPS + amount * 1e18 / int(total_supply_staked());
+        int256 nextRPS = prevRPS + amount * 1e18 / total_supply_staked().toInt256();
 
         BoardroomSnapshot memory newSnapshot = BoardroomSnapshot({time: block.number, rewardReceived: amount, rewardPerShare: nextRPS});
         boardroomHistory.push(newSnapshot);
@@ -537,7 +575,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         }
 
         int256 reward_balance = balance_reward(_sender);
-        if (reward_balance > 0) {
+        if (reward_balance != 0) {
             _balances[_sender].reward -= reward_balance;
             _balances[receiver].reward += reward_balance;
         }
@@ -547,6 +585,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
             ISharplabs(token).burn(_sender, share_balance);
             ISharplabs(token).mint(receiver, share_balance);
         }
+
+        members[receiver].rewardEarned = members[_sender].rewardEarned;
+        members[receiver].lastSnapshotIndex = members[_sender].lastSnapshotIndex;
+        members[receiver].epochTimerStart = members[_sender].epochTimerStart;
+
+        delete members[_sender];
     }
 
     function _validateReceiver(address _receiver) private view {
@@ -557,10 +601,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function treasuryWithdrawFunds(address _token, uint256 amount, address to) external onlyTreasury {
+        require(to != address(0), "to address can not be zero address");
         IERC20(_token).safeTransfer(to, amount);
     }
 
     function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
-        payable(to).transfer(amount);
+        require(to != address(0), "to address can not be zero address");
+        Address.sendValue(payable(to), amount);
     }
 }
