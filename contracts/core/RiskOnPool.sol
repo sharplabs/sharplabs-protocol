@@ -74,6 +74,8 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     mapping(address => WithdrawInfo) public withdrawRequest;
 
     mapping (address => address) public pendingReceivers;
+    mapping (address => address[]) public pendingSenders;
+
 
     uint256 public withdrawLockupEpochs;
     uint256 public userExitEpochs;
@@ -355,6 +357,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     }
 
     function withdraw_request(uint256 _amount) external payable notBlacklisted(msg.sender) whenNotPaused {
+        require(_amount != 0, "withdraw request cannot be equal to 0");
         require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount out of range");
         require(members[msg.sender].epochTimerStart + withdrawLockupEpochs <= epoch(), "still in withdraw lockup");
         require(msg.value >= gasthreshold, "need more gas to handle request");
@@ -393,7 +396,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         require(amountOut <= amount, "withdraw overflow");
         updateReward(msg.sender);
         _totalSupply.reward -= members[msg.sender].rewardEarned;
-        members[msg.sender].rewardEarned = 0;
+        members[msg.sender].rewardEarned = 0;   // rewards will be cleared
         _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
         _totalSupply.withdrawable += amount;
@@ -544,6 +547,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
         _validateReceiver(_receiver);
         pendingReceivers[msg.sender] = _receiver;
+        pendingSenders[_receiver].push(msg.sender);
     }
 
     function acceptTransfer(address _sender) external nonReentrant {
@@ -553,6 +557,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         address receiver = msg.sender;
         require(pendingReceivers[_sender] == receiver, "Pool: transfer not signalled");
         delete pendingReceivers[_sender];
+        delete pendingSenders[receiver];
 
         _validateReceiver(receiver);
 
@@ -598,6 +603,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked_balance is not equal to zero");
         require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw_balance is not equal to zero");
         require(balance_reward(_receiver) == 0, "invalid receiver: receiver reward_balance is not equal to zero");
+        require(members[_receiver].rewardEarned == 0, "invalid receiver: receiver rewardEarned is not equal to zero");
     }
 
     function treasuryWithdrawFunds(address _token, uint256 amount, address to) external onlyTreasury {
@@ -605,7 +611,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         IERC20(_token).safeTransfer(to, amount);
     }
 
-    function treasuryWithdrawFundsETH(uint256 amount, address to) external onlyTreasury {
+    function treasuryWithdrawFundsETH(uint256 amount, address to) external nonReentrant onlyTreasury {
         require(to != address(0), "to address can not be zero address");
         Address.sendValue(payable(to), amount);
     }
