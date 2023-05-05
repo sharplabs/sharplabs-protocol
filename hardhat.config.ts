@@ -24,9 +24,6 @@ module.exports = {
           },
         },
       },
-      {
-        version: "0.6.12",
-      },
     ],
   },
   settings: {
