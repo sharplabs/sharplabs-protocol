@@ -373,7 +373,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     function withdraw(uint256 amount) public override onlyOneBlock notBlacklisted(msg.sender) whenNotPaused {
         require(amount != 0, "cannot withdraw 0");
         super.withdraw(amount);
-        ISharplabs(token).burn(msg.sender, amount * 1e12);   
+        try ISharplabs(token).burn(msg.sender, amount * 1e12) {
+        } catch {}
         emit Withdrawn(msg.sender, amount);
     }
 
@@ -384,7 +385,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         _balances[msg.sender].wait -= amount;
         _totalSupply.wait -= amount;
         IERC20(share).safeTransfer(msg.sender, amount);  
-        ISharplabs(token).burn(msg.sender, amount * 1e12);   
+        try ISharplabs(token).burn(msg.sender, amount * 1e12) {
+        } catch {}
         delete stakeRequest[msg.sender];
         emit Redeemed(msg.sender, amount);   
     }
@@ -398,7 +400,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         require(amountOut <= amount, "withdraw overflow");
         if (amount - amountOut > 0) {
             uint diff = amount - amountOut;
-            ISharplabs(token).burn(msg.sender, diff * 1e12);
+            try ISharplabs(token).burn(msg.sender, diff * 1e12) {
+            } catch {}        
         }
         updateReward(msg.sender);
         _totalSupply.reward -= members[msg.sender].rewardEarned;
@@ -451,7 +454,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             claimReward(user);
             if (glpOutFee > 0) {
                 uint _glpOutFee = amount * glpOutFee / 10000;
-                ISharplabs(token).burn(user, _glpOutFee * 1e12);
+                try ISharplabs(token).burn(user, _glpOutFee * 1e12) {
+                } catch {}
                 amountReceived = amount - _glpOutFee;
             }
             _balances[user].staked -= amount;

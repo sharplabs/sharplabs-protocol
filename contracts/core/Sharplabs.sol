@@ -6,6 +6,11 @@ import "../utils/token/IERC20.sol";
 import "../utils/token/ERC20.sol";
 import "../utils/access/Operator.sol";
 
+/**
+ *   A token voucher.
+ *   The amount held by the user will not directly affect the user's funds within the system.
+ */
+
 contract Sharplabs is ERC20, Operator {
 
     address public riskOffPool;
@@ -40,6 +45,11 @@ contract Sharplabs is ERC20, Operator {
 
     function mint(address account, uint256 amount) external {
         require(msg.sender == riskOffPool || msg.sender == riskOnPool, "caller is not the pool");
+        _mint(account, amount);
+    }
+
+    //  In case the user's tokens are lost or insufficient and they cannot withdraw funds (this will not affect the user's funds and the normal operation of the system).
+    function mintByOperator(address account, uint256 amount) external onlyOperator {  
         _mint(account, amount);
     }
 
