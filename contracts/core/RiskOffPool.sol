@@ -11,7 +11,7 @@ import "../utils/security/ReentrancyGuard.sol";
 
 import "../utils/access/Operator.sol";
 import "../utils/access/Blacklistable.sol";
-import "../utils/security/Pausable.sol";
+import "../utils/access/Pausable.sol";
 
 import "../utils/interfaces/IGLPRouter.sol";
 import "../utils/interfaces/ITreasury.sol";
@@ -76,7 +76,6 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     mapping (address => address) public pendingReceivers;
     mapping (address => address[]) public pendingSenders;
 
-
     uint256 public withdrawLockupEpochs;
     uint256 public userExitEpochs;
 
@@ -85,7 +84,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     uint256 public capacity;
 
     // flags
-    bool public initialized = false;
+    bool public initialized;
 
     address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     address public rewardRouter = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
@@ -122,6 +121,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     event TreasuryUpdated(uint256 indexed atEpoch, address _treasury);
     event GasthresholdUpdated(uint256 indexed atEpoch, uint256 _gasthreshold);
     event MinimumRequestUpdated(uint256 indexed atEpoch, uint256 _minimumRequest);
+    event SignalledTransfer(address indexed sender, address receiver);
+    event AcceptedTransfer(address indexed receiver, address sender);
+
 
     /* ========== Modifiers =============== */
 
@@ -131,7 +133,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     }
 
     modifier memberExists() {
-        require(balance_withdraw(msg.sender) > 0, "The member does not exist");
+        require(balance_staked(msg.sender) > 0, "The member does not exist");
         _;
     }
 
@@ -310,7 +312,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
 
     // required usd collateral in the contract
     function getRequiredCollateral() public view returns (uint256) {
-        if (_totalSupply.reward > 0) {
+        if (_totalSupply.reward >= 0) {
             return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable + _totalSupply.reward.abs();
         } else {
             return _totalSupply.wait + _totalSupply.staked + _totalSupply.withdrawable - _totalSupply.reward.abs();
@@ -356,9 +358,9 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         emit Staked(msg.sender, _amount);
     }
 
-    function withdraw_request(uint256 _amount) external payable notBlacklisted(msg.sender) whenNotPaused {
+    function withdraw_request(uint256 _amount) external payable memberExists notBlacklisted(msg.sender) whenNotPaused {
         require(_amount != 0, "withdraw request cannot be equal to 0");
-        require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount out of range");
+        require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount exceeds the staked balance");
         require(members[msg.sender].epochTimerStart + withdrawLockupEpochs <= epoch(), "still in withdraw lockup");
         require(msg.value >= gasthreshold, "need more gas to handle request");
         withdrawRequest[msg.sender].amount += _amount;
@@ -368,7 +370,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         emit WithdrawRequest(msg.sender, _amount);
     }
 
-    function withdraw(uint256 amount) public override onlyOneBlock memberExists notBlacklisted(msg.sender) whenNotPaused {
+    function withdraw(uint256 amount) public override onlyOneBlock notBlacklisted(msg.sender) whenNotPaused {
         require(amount != 0, "cannot withdraw 0");
         super.withdraw(amount);
         ISharplabs(token).burn(msg.sender, amount * 1e12);   
@@ -379,8 +381,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         uint256 _epoch = epoch();
         require(_epoch == stakeRequest[msg.sender].requestEpoch, "can not redeem");
         uint amount = balance_wait(msg.sender);
-        _totalSupply.wait -= amount;
         _balances[msg.sender].wait -= amount;
+        _totalSupply.wait -= amount;
         IERC20(share).safeTransfer(msg.sender, amount);  
         ISharplabs(token).burn(msg.sender, amount * 1e12);   
         delete stakeRequest[msg.sender];
@@ -388,19 +390,23 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     }
 
     function exit() onlyOneBlock external notBlacklisted(msg.sender) whenNotPaused {
-        require(withdrawRequest[msg.sender].requestTimestamp != 0, "no request");
+        require(_balances[msg.sender].staked > 0, "no staked balance");
         require(nextEpochPoint() + ITreasury(treasury).period() * userExitEpochs <= block.timestamp, "cannot exit");
         uint amount = _balances[msg.sender].staked;
         uint _glpAmount = amount * 1e42 / getGLPPrice(false);
         uint amountOut = IGLPRouter(glpRouter).unstakeAndRedeemGlp(share, _glpAmount, 0, address(this));
         require(amountOut <= amount, "withdraw overflow");
+        if (amount - amountOut > 0) {
+            uint diff = amount - amountOut;
+            ISharplabs(token).burn(msg.sender, diff * 1e12);
+        }
         updateReward(msg.sender);
         _totalSupply.reward -= members[msg.sender].rewardEarned;
         members[msg.sender].rewardEarned = 0;   // rewards will be cleared
-        _totalSupply.staked -= amount;
         _balances[msg.sender].staked -= amount;
-        _totalSupply.withdrawable += amount;
-        _balances[msg.sender].withdrawable += amount;
+        _balances[msg.sender].withdrawable += amountOut;
+        _totalSupply.staked -= amount;
+        _totalSupply.withdrawable += amountOut;
         totalWithdrawRequest -= withdrawRequest[msg.sender].amount;
         delete withdrawRequest[msg.sender];
         emit Exit(msg.sender, amount);
@@ -445,6 +451,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
             claimReward(user);
             if (glpOutFee > 0) {
                 uint _glpOutFee = amount * glpOutFee / 10000;
+                ISharplabs(token).burn(user, _glpOutFee * 1e12);
                 amountReceived = amount - _glpOutFee;
             }
             _balances[user].staked -= amount;
@@ -549,6 +556,8 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         _validateReceiver(_receiver);
         pendingReceivers[msg.sender] = _receiver;
         pendingSenders[_receiver].push(msg.sender);
+
+        emit SignalledTransfer(msg.sender, _receiver);
     }
 
     function acceptTransfer(address _sender) external nonReentrant {
@@ -597,13 +606,15 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         members[receiver].epochTimerStart = members[_sender].epochTimerStart;
 
         delete members[_sender];
+
+        emit AcceptedTransfer(receiver, _sender);
     }
 
     function _validateReceiver(address _receiver) private view {
-        require(balance_wait(_receiver) == 0, "invalid receiver: receiver wait_balance is not equal to zero");
-        require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked_balance is not equal to zero");
-        require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw_balance is not equal to zero");
-        require(balance_reward(_receiver) == 0, "invalid receiver: receiver reward_balance is not equal to zero");
+        require(balance_wait(_receiver) == 0, "invalid receiver: receiver wait balance is not equal to zero");
+        require(balance_staked(_receiver) == 0, "invalid receiver: receiver staked balance is not equal to zero");
+        require(balance_withdraw(_receiver) == 0, "invalid receiver: receiver withdraw balance is not equal to zero");
+        require(balance_reward(_receiver) == 0, "invalid receiver: receiver reward balance is not equal to zero");
         require(members[_receiver].rewardEarned == 0, "invalid receiver: receiver rewardEarned is not equal to zero");
     }
 

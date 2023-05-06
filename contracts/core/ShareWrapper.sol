@@ -72,7 +72,7 @@ contract ShareWrapper {
     }
 
     function withdraw(uint256 amount) public virtual {
-        require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than staked amount");
+        require(_balances[msg.sender].withdrawable >= amount, "withdraw request greater than withdrawable amount");
         _totalSupply.withdrawable -= amount;
         _balances[msg.sender].withdrawable -= amount;
         int _reward = balance_reward(msg.sender);

@@ -6,6 +6,7 @@ import "../utils/interfaces/IGLPPool.sol";
 import "../utils/access/Operator.sol";
 import "../utils/token/IERC20.sol";
 import "../utils/token/SafeERC20.sol";
+import "../utils/security/ReentrancyGuard.sol";
 
 /**
  * @dev Sharplabs Treasury Contract. It provides an interface for governance accounts to 
@@ -15,7 +16,7 @@ import "../utils/token/SafeERC20.sol";
  * It also provides a pause mechanism to temporarily halt the system's operation 
  * in case of emergencies (users' on-chain funds are safe).
  */
-contract Treasury is Operator {
+contract Treasury is Operator, ReentrancyGuard {
 
     using Address for address;
     using SafeERC20 for IERC20;
@@ -72,7 +73,7 @@ contract Treasury is Operator {
     }
 
     function setRiskOnPoolRatio(uint _riskOnPoolRatio) external onlyGovernance {
-        require(_riskOnPoolRatio > 0, "Ratio cannot be zero");
+        require(_riskOnPoolRatio > 0, "ratio cannot be zero");
         riskOnPoolRatio = _riskOnPoolRatio;
     }
 
@@ -81,8 +82,9 @@ contract Treasury is Operator {
         IGLPPool(riskOnPool).setGlpFee(_glpInFee, _glpOutFee);
     }
 
-    function setGovernance(address _governance) external onlyGovernance {
-        require(_governance != address(0), "zero address");
+    function setGovernance(address _governance) external {
+        require(msg.sender == operator() || msg.sender == governance);
+        require(_governance != address(0), "governance address cannot be zero address");
         governance = _governance;
     }
 
@@ -135,7 +137,7 @@ contract Treasury is Operator {
         uint256 _minOut, 
         address _receiver
     ) external onlyGovernance {
-        require(_glpPool == _receiver, "receiver must be glp pool ");
+        require(_glpPool == _receiver, "receiver must be equal to glpPool ");
         IGLPPool(_glpPool).withdrawByGov(_tokenOut, _glpAmount, _minOut, _receiver);
     }
 
@@ -157,11 +159,11 @@ contract Treasury is Operator {
     function withdrawPoolFunds(address _pool, address _token, uint256 _amount, address _to, bool _maximum) external onlyGovernance {
         if (_pool == riskOffPool && _token == share) {
             uint shareAmount = IERC20(share).balanceOf(_pool);
-            require(IGLPPool(_pool).getRequiredCollateral() + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "cannot withdraw pool funds");
+            require(IGLPPool(_pool).getRequiredCollateral() + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "low collateral: cannot withdraw pool funds");
         }
         if (_pool == riskOnPool && _token == share) {
             uint shareAmount = IERC20(share).balanceOf(_pool);
-            require(IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "cannot withdraw pool funds");
+            require(IGLPPool(_pool).getRequiredCollateral() * riskOnPoolRatio / 100 + _amount <= IGLPPool(_pool).getStakedGLPUSDValue(_maximum) + shareAmount, "low collateral: cannot withdraw pool funds");
         }
         IGLPPool(_pool).treasuryWithdrawFunds(_token, _amount, _to);
     }
@@ -188,9 +190,9 @@ contract Treasury is Operator {
     }
 
     // withdraw funds(ETH) from treasury to the gov wallet
-    function withdrawETH(uint256 amount) external onlyGovernance {
+    function withdrawETH(uint256 amount) external nonReentrant onlyGovernance {
         require(amount <= address(this).balance, "insufficient funds");
-        payable(msg.sender).transfer(amount);
+        Address.sendValue(payable(msg.sender), amount);
     }
 
     // trigger by the governance wallet at the end of each epoch
