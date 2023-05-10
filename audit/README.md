@@ -4,6 +4,8 @@ Audit Reports of Sharplabs Finance Protocol
 
 ## Sharplabs Finance v1
 
-- [Certik](./audit/REP-Sharplabs_Finance-Protocol-2023-05-08.pdf)
+Certik Audit Report for Sharplabs Finance v1
+
+- [Certik Audit Report-REP-Sharplabs_Finance-Protocol-2023-05-08.pdf](./audit/REP-Sharplabs_Finance-Protocol-2023-05-08.pdf)
 
 
