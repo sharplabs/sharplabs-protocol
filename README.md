@@ -18,7 +18,7 @@ You can find all audit reports here
 
 V1 - MAY 2023
 
-- [Certik](./audit/REP-final-20230508T031115Z.pdf)
+- [Certik](./audit/Certik/REP-Sharplabs_Finance-Protocol-2023-05-08.pdf)
 
 
 ## Connect with the community
