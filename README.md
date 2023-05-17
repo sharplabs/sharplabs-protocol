@@ -23,7 +23,7 @@ V1 - MAY 2023
 
 ## Connect with the community
 
-[Discord](https://discord.gg/NdFQSFxPtc)
+[Discord](https://discord.gg/9grKXAFr)
 
 [Telegram](https://t.me/SharpLabsOfficial) 
 
