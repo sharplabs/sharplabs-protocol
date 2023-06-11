@@ -32,12 +32,22 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     /* ========== DATA STRUCTURES ========== */
 
+    /** @dev Record the deposit information of each user in the system.
+     *  @param rewardEarned The total earnings of the user.
+     *  @param lastSnapshotIndex The starting time for calculating the user's earnings.
+     *  @param epochTimerStart Record the epoch when the user's request is handled.
+     */ 
     struct Memberseat {
         int256 rewardEarned;
         uint256 lastSnapshotIndex;
         uint256 epochTimerStart;
     }
 
+    /** @dev Record the information of rewards distributed for each epoch in the system.
+     *  @param rewardReceived The total reward of the epoch.
+     *  @param rewardPerShare The reward for each share.
+     *  @param time block.number
+     */
     struct BoardroomSnapshot {
         int256 rewardReceived;
         int256 rewardPerShare;
@@ -58,13 +68,20 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     /* ========== STATE VARIABLES ========== */
 
-    // reward
+    // The total amount of withdrawals per epoch.
     uint256 public totalWithdrawRequest;
 
+    // The token that accepts deposits and withdrawals.
     address public token;
+
     address public treasury;
 
+    /** @dev Users will be charged a certain amount of gas fees when making deposits and withdrawals, 
+     *  which will be used to handle the deposit and withdrawal requests.
+     */
     uint256 public gasthreshold;
+
+    // The minimum required amount for deposits and withdrawals.
     uint256 public minimumRequest;
 
     mapping(address => Memberseat) public members;
@@ -73,14 +90,25 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     mapping(address => StakeInfo) public stakeRequest;
     mapping(address => WithdrawInfo) public withdrawRequest;
 
+    // Record the information when a user transfers their ownership to another person.
     mapping (address => address) public pendingReceivers;
+    // Record the information of the sender address when the ownership of a specific address is transferred.
     mapping (address => address[]) public pendingSenders;
 
     uint256 public withdrawLockupEpochs;
+    // Users have the freedom to exit after userExitEpochs.
     uint256 public userExitEpochs;
 
+    /** @dev glpInFee and glpOutFee are charged by gmx protocol and
+     *  they can undergo frequent changes.
+     */
     uint256 public glpInFee;
     uint256 public glpOutFee;
+
+    /** @dev The maximum limit for deposits that the system can accept.
+     *  The capacity of the risk-off pool are determined by the capacity 
+     *  the risk-on pool.
+     */
     uint256 public capacity;
 
     // flags
@@ -176,7 +204,7 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         boardroomHistory.push(genesisSnapshot);
 
         withdrawLockupEpochs = 2; // Lock for 2 epochs (48h) before release withdraw
-        userExitEpochs = 4;
+        userExitEpochs = 4; 
         capacity = 1e12;
         initialized = true;
 
@@ -185,6 +213,9 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     /* ========== CONFIG ========== */
 
+    /** @dev In case of an emergency, the administrator has the authority to temporarily pause the system. 
+     *  This pause may impact certain functionalities such as user deposits, withdrawals, redemptions, and exits.
+     */
     function pause() external onlyTreasury {
         super._pause();
     }
@@ -267,8 +298,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    // =========== Snapshot getters
-
     function latestSnapshotIndex() public view returns (uint256) {
         return boardroomHistory.length - 1;
     }
@@ -296,7 +325,6 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
     function nextEpochPoint() public view returns (uint256) {
         return ITreasury(treasury).nextEpochPoint();
     }
-    // =========== Member getters
 
     function rewardPerShare() public view returns (int256) {
         return getLatestSnapshot().rewardPerShare;
@@ -336,6 +364,13 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
+    /** @dev user stake function.
+     *  Protocol fees and GLP protocol fees will be charged.
+     *  User will receive an equivalent amount of sharplabs tokens when they stake.
+     *  Additional gas fees will also be charged.
+     *  The number of multiple stake requests will be accumulated.
+     *  @param _amount The amount of deposited tokens.
+     */
     function stake(uint256 _amount) public payable override onlyOneBlock notBlacklisted(msg.sender) whenNotPaused {
         require(_amount >= minimumRequest, "stake amount too low");
         require(_totalSupply.staked + _totalSupply.wait + _amount <= capacity, "stake no capacity");
@@ -358,6 +393,10 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         emit Staked(msg.sender, _amount);
     }
 
+    /** @dev user withdraw request function.
+     *  The number of multiple withdrawal requests will be accumulated.
+     *  @param _amount The amount of withdraw tokens.
+     */
     function withdraw_request(uint256 _amount) external payable memberExists notBlacklisted(msg.sender) whenNotPaused {
         require(_amount != 0, "withdraw request cannot be equal to 0");
         require(_amount + withdrawRequest[msg.sender].amount <= _balances[msg.sender].staked, "withdraw amount exceeds the staked balance");
@@ -370,6 +409,11 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         emit WithdrawRequest(msg.sender, _amount);
     }
 
+    /** @dev user withdraw functions.
+     *  After a user's withdrawal request has been handled, 
+     *  the user can invoke this function to retrieve their tokens.
+     *  @param amount withdraw token amount.
+     */
     function withdraw(uint256 amount) public override onlyOneBlock notBlacklisted(msg.sender) whenNotPaused {
         require(amount != 0, "cannot withdraw 0");
         super.withdraw(amount);
@@ -378,6 +422,12 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         emit Withdrawn(msg.sender, amount);
     }
 
+    /** @dev user redeem function.
+     *  After a user makes a stake request, they can revoke the request 
+     *  and retrieve all their tokens before it is handled.
+     *  Handled requests and associated tokens are not affected by this 
+     *  action and will remain unchanged.
+     */
     function redeem() external onlyOneBlock notBlacklisted(msg.sender) whenNotPaused {
         uint256 _epoch = epoch();
         require(_epoch == stakeRequest[msg.sender].requestEpoch, "can not redeem");
@@ -391,6 +441,10 @@ contract RiskOnPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, B
         emit Redeemed(msg.sender, amount);   
     }
 
+    /** @dev user exit function.
+     *  If user requests remain unhandled for consecutive epochs, 
+     *  users have the option to retrieve their principal amount autonomously.
+     */
     function exit() onlyOneBlock external notBlacklisted(msg.sender) whenNotPaused {
         require(_balances[msg.sender].staked > 0, "no staked balance");
         require(nextEpochPoint() + ITreasury(treasury).period() * userExitEpochs <= block.timestamp, "cannot exit");
