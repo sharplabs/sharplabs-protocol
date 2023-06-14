@@ -68,7 +68,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
 
     /* ========== STATE VARIABLES ========== */
 
-    // The total amount of withdrawals per epoch.
+    // The total token amount of withdrawals per epoch.
     uint256 public totalWithdrawRequest;
 
     // The token that accepts deposits and withdrawals.
@@ -90,13 +90,18 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     mapping(address => StakeInfo) public stakeRequest;
     mapping(address => WithdrawInfo) public withdrawRequest;
 
-    // Record the information when a user transfers their ownership to another person.
+    // Record the receiver's addresses when a user transfers their ownership to another person.
     mapping (address => address) public pendingReceivers;
-    // Record the information of the sender address when the ownership of a specific address is transferred.
+
+    // Record the sender's addresses when a specific address becomes a receiver.
     mapping (address => address[]) public pendingSenders;
 
+    // The number of epochs that need to pass before a withdraw request can be submitted.
     uint256 public withdrawLockupEpochs;
-    // Users have the freedom to exit after userExitEpochs.
+
+    /** @dev If a user's withdraw request remains unhandled after the userExitEpochs, 
+     *  the user can retrieve their funds by calling the exit() function on their own.
+     */
     uint256 public userExitEpochs;
 
     /** @dev glpInFee and glpOutFee are charged by gmx protocol and
@@ -114,6 +119,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
     // flags
     bool public initialized;
 
+    // glp related addresses
     address public glpRouter = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
     address public rewardRouter = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
     address public glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
@@ -314,6 +320,7 @@ contract RiskOffPool is ShareWrapper, ContractGuard, ReentrancyGuard, Operator, 
         return boardroomHistory[getLastSnapshotIndexOf(member)];
     }
 
+    // check if a user is eligible to withdraw funds.
     function canWithdraw(address member) external view returns (bool) {
         return members[member].epochTimerStart + withdrawLockupEpochs <= epoch();
     }
